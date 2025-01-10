@@ -7,11 +7,14 @@ from app.models.building import Building
 from app.models.activity import Activity
 from app.models.organization_activity import OrganizationActivity
 from app.models.building_organization import BuildingOrganization
+from app.models.phones import Phones
 from app.schemas.schemas import OrganizationSchema
 from sqlalchemy import func, text
 
+# Создание роутера
 router = APIRouter()
 
+# Загрузка переменных окружения
 def load_env(env_path='.env'):
     env_vars = {}
     with open(env_path) as f:
@@ -34,13 +37,13 @@ def verify_api_key(api_key: str):
         raise HTTPException(status_code=403, detail="Invalid API Key")
 
 
-# Возвращает организации по ID здания -----------------------------------
+# Возвращает список организаций по ID здания -----------------------------------
 @router.get("/organizations/building/{building_id}", response_model=List[OrganizationSchema])
 def get_organizations_by_building(building_id: int, api_key: str, db: Session = Depends(get_db)):
     # Проверка API ключа
     verify_api_key(api_key)
 
-    # Получение организаций по ID здания
+    # Получение списка организаций по ID здания
     s = f"""
             SELECT b.id, b.name, c.address
             FROM building_organization a 
@@ -49,12 +52,16 @@ def get_organizations_by_building(building_id: int, api_key: str, db: Session = 
             WHERE a.building_id = {building_id} 
             ORDER BY b.name
         """
+    
+    # Формирование запроса
     query = text(s)
     print(f"query: {query}")
+
+    # Выполнение запроса
     result = db.execute(query)
     recs = result.fetchall()  # Получаем все результаты
 
-    # Список организаций
+    # Список всех организаций в здании (тип будет List[OrganizationSchema])
     organizations = []
 
     # Цикл по всей выборке
@@ -71,6 +78,7 @@ def get_organizations_by_building(building_id: int, api_key: str, db: Session = 
         result = db.execute(query)
         recs2 = result.fetchall()  # Получаем все результаты
 
+        # Список всех телефонов организации
         phones = [] 
         # Цикл по всем телефонам
         for rec2 in recs2:
@@ -89,26 +97,27 @@ def get_organizations_by_building(building_id: int, api_key: str, db: Session = 
         result = db.execute(query)
         activities = result.fetchall()  # Получаем все результаты   
 
+        # Список всех деятельностей организации
         activities_names = []
         # Цикл по всем деятельностям
         for activity in activities:
             activities_names.append(activity.name)
 
-        # Создание схемы организации
+        # Создание организации по схеме
         organization = OrganizationSchema(
             id=rec.id, 
             name=rec.name, 
             address=rec.address,
             phone_numbers=phones, 
             activity=activities_names)
-    
-        # Добавление организации в список
+
+        # Добавление этой организации в общий список организаций
         organizations.append(organization)
 
     return organizations
 
 
-# Возвращает организации по ID деятельности -----------------------------------
+# Возвращает список организаций по ID деятельности -----------------------------------
 @router.get("/organizations/activity/{activity_id}", response_model=List[OrganizationSchema])
 def get_organizations_by_activity(activity_id: int, api_key: str, db: Session = Depends(get_db)):
     # Проверка API ключа
@@ -129,7 +138,7 @@ def get_organizations_by_activity(activity_id: int, api_key: str, db: Session = 
     return organizations
 
 
-# Возвращает организации по координатам и радиусу -----------------------------------
+# Возвращает список организаций по координатам и радиусу -----------------------------------
 @router.get("/organizations/nearby", response_model=List[OrganizationSchema])
 def get_organizations_nearby(latitude: float, longitude: float, radius: float, api_key: str, db: Session = Depends(get_db)):
     verify_api_key(api_key)
