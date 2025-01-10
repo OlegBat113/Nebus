@@ -6,8 +6,8 @@ class OrganizationSchema(BaseModel):
     name: str
     phone_numbers: Optional[str] = None
 
-    #class Config:
-    #    orm_mode = True
+    class Config:
+        orm_mode = True
 
 # Если у вас есть другие схемы, добавьте их здесь
 
