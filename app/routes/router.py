@@ -33,7 +33,8 @@ def verify_api_key(api_key: str):
     if api_key != API_KEY:
         raise HTTPException(status_code=403, detail="Invalid API Key")
 
-# Возвращает организации по ID здания
+
+# Возвращает организации по ID здания -----------------------------------
 @router.get("/organizations/building/{building_id}", response_model=List[OrganizationSchema])
 def get_organizations_by_building(building_id: int, api_key: str, db: Session = Depends(get_db)):
     # Проверка API ключа
@@ -41,10 +42,9 @@ def get_organizations_by_building(building_id: int, api_key: str, db: Session = 
 
     # Получение организаций по ID здания
     s = f"""
-            SELECT b.*, c.address as building_address
+            SELECT b.id, b.name, b.phone_numbers
             FROM building_organization a 
             LEFT JOIN organizations b ON b.id = a.organization_id 
-            LEFT JOIN buildings c ON c.id = a.building_id
             WHERE a.building_id = {building_id} 
             ORDER BY b.name
         """
@@ -56,7 +56,7 @@ def get_organizations_by_building(building_id: int, api_key: str, db: Session = 
     return organizations
 
 
-# Возвращает организации по ID деятельности
+# Возвращает организации по ID деятельности -----------------------------------
 @router.get("/organizations/activity/{activity_id}", response_model=List[OrganizationSchema])
 def get_organizations_by_activity(activity_id: int, api_key: str, db: Session = Depends(get_db)):
     # Проверка API ключа
@@ -64,10 +64,9 @@ def get_organizations_by_activity(activity_id: int, api_key: str, db: Session = 
 
     # Получение организаций по ID деятельности
     s = f"""
-            SELECT b.*, c.name as activity_name
+            SELECT b.id, b.name, b.phone_numbers
             FROM organization_activity a
             LEFT JOIN organizations b ON (a.organization_id = b.id)
-            LEFT JOIN activities c ON (a.activity_id = c.id)
             WHERE a.activity_id = {activity_id}
             ORDER BY b.name
         """
@@ -77,7 +76,8 @@ def get_organizations_by_activity(activity_id: int, api_key: str, db: Session = 
     organizations = result.fetchall()  # Получаем все результаты
     return organizations
 
-# Возвращает организации по координатам и радиусу
+
+# Возвращает организации по координатам и радиусу -----------------------------------
 @router.get("/organizations/nearby", response_model=List[OrganizationSchema])
 def get_organizations_nearby(latitude: float, longitude: float, radius: float, api_key: str, db: Session = Depends(get_db)):
     verify_api_key(api_key)
@@ -86,7 +86,8 @@ def get_organizations_nearby(latitude: float, longitude: float, radius: float, a
     ).all()
     return organizations
 
-# Возвращает организацию по ID
+
+# Возвращает организацию по ID -----------------------------------
 @router.get("/organizations/{organization_id}", response_model=OrganizationSchema)
 def get_organization_by_id(organization_id: int, api_key: str, db: Session = Depends(get_db)):
     verify_api_key(api_key)
@@ -95,7 +96,8 @@ def get_organization_by_id(organization_id: int, api_key: str, db: Session = Dep
         raise HTTPException(status_code=404, detail="Organization not found")
     return organization
 
-# Возвращает организации по названию деятельности
+
+# Возвращает организации по названию деятельности -----------------------------------
 @router.get("/organizations/search", response_model=List[OrganizationSchema])
 def search_organizations_by_activity(activity_name: str, api_key: str, db: Session = Depends(get_db)):
     verify_api_key(api_key)
@@ -104,7 +106,8 @@ def search_organizations_by_activity(activity_name: str, api_key: str, db: Sessi
     organizations = db.query(Organization).filter(Organization.id.in_(organization_ids)).all()
     return organizations
 
-# Возвращает организации по названию
+
+# Возвращает организации по названию -----------------------------------
 @router.get("/organizations/search_by_name", response_model=List[OrganizationSchema])
 def search_organizations_by_name(name: str, api_key: str, db: Session = Depends(get_db)):
     verify_api_key(api_key)
