@@ -7,10 +7,9 @@ class Organization(Base):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     name = Column(String, nullable=False, index=True)
-    phone_numbers = Column(String, nullable=True)  # Хранение номеров телефонов в виде строки
-    building_id = Column(Integer, ForeignKey('buildings.id'), nullable=True)  # Внешний ключ на Building
 
-    building = relationship("Building")
+    phones = relationship("Phones", back_populates="organization")
+
     organization_activities = relationship("OrganizationActivity", back_populates="organization")  # Связь с OrganizationActivity
     building_organizations = relationship("BuildingOrganization", back_populates="organization")  # Связь с BuildingOrganization
 

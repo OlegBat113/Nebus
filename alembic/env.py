@@ -12,8 +12,13 @@ from sqlalchemy import pool
 
 from alembic import context
 
-from app.database import Base
-from app.models import Activity, Building, Organization
+from app.database.database import Base
+from app.models.activity import Activity
+from app.models.building import Building
+from app.models.organization import Organization
+from app.models.phones import Phones
+from app.models.organization_activity import OrganizationActivity
+from app.models.building_organization import BuildingOrganization
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -90,7 +95,3 @@ if context.is_offline_mode():
 else:
     run_migrations_online()
 
-try:
-    from app.database import Base
-except ModuleNotFoundError as e:
-    print(f"Ошибка импорта: {e}")

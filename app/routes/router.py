@@ -42,17 +42,69 @@ def get_organizations_by_building(building_id: int, api_key: str, db: Session = 
 
     # Получение организаций по ID здания
     s = f"""
-            SELECT b.id, b.name, b.phone_numbers
+            SELECT b.id, b.name, c.address
             FROM building_organization a 
             LEFT JOIN organizations b ON b.id = a.organization_id 
+            LEFT JOIN buildings c ON c.id = a.building_id
             WHERE a.building_id = {building_id} 
             ORDER BY b.name
         """
     query = text(s)
     print(f"query: {query}")
     result = db.execute(query)
+    recs = result.fetchall()  # Получаем все результаты
 
-    organizations = result.fetchall()  # Получаем все результаты
+    # Список организаций
+    organizations = []
+
+    # Цикл по всей выборке
+    for rec in recs:
+        print(rec)
+
+        s = f"""
+            SELECT p.phone_number
+            FROM phones p
+            WHERE p.organization_id = {rec.id}
+        """
+        query = text(s)
+        print(f"query: {query}")
+        result = db.execute(query)
+        recs2 = result.fetchall()  # Получаем все результаты
+
+        phones = [] 
+        # Цикл по всем телефонам
+        for rec2 in recs2:
+            phones.append(rec2.phone_number)
+        
+
+        # Добавление деятельности в организацию
+        s = f"""
+            SELECT c.name
+            FROM organization_activity a
+            LEFT JOIN activities c ON (a.activity_id = c.id)
+            WHERE a.organization_id = {rec.id}
+            """
+        query = text(s)
+        print(f"query: {query}")
+        result = db.execute(query)
+        activities = result.fetchall()  # Получаем все результаты   
+
+        activities_names = []
+        # Цикл по всем деятельностям
+        for activity in activities:
+            activities_names.append(activity.name)
+
+        # Создание схемы организации
+        organization = OrganizationSchema(
+            id=rec.id, 
+            name=rec.name, 
+            address=rec.address,
+            phone_numbers=phones, 
+            activity=activities_names)
+    
+        # Добавление организации в список
+        organizations.append(organization)
+
     return organizations
 
 
