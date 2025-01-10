@@ -1,9 +1,13 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from typing import List
-from app.database import get_db
-from app.models import Organization, Building, Activity, OrganizationActivity, BuildingOrganization
-from app.schemas import OrganizationSchema
+from app.database.database import get_db
+from app.models.organization import Organization
+from app.models.building import Building
+from app.models.activity import Activity
+from app.models.organization_activity import OrganizationActivity
+from app.models.building_organization import BuildingOrganization
+from app.schemas.schemas import OrganizationSchema
 from sqlalchemy import func, text
 
 router = APIRouter()

@@ -16,29 +16,32 @@ pip install fastapi uvicorn sqlalchemy alembic pydantic
 
 ### Шаг 2: Структура проекта
 
-Создайте следующую структуру папок и файлов:
+Рекомендуемая структура проекта:
 
 ```
-my_fastapi_project/
+your_project/
 │
 ├── app/
 │   ├── __init__.py
 │   ├── main.py
-│   ├── models.py
-│   ├── schemas.py
 │   ├── database.py
-│   └── routes/
-│       ├── __init__.py
-│       └── items.py
-│
-├── alembic/
-│   ├── env.py
-│   ├── script.py.mako
-│   └── versions/
+│   ├── models/
+│   │   ├── __init__.py
+│   │   └── models.py
+│   ├── routes/
+│   │   ├── __init__.py
+│   │   └── routers.py
+│   ├── schemas/
+│   │   ├── __init__.py
+│   │   └── schemas.py
+│   └── alembic/
+│       ├── env.py
+│       └── versions/
+│           └── (ваши миграции)
 │
 ├── alembic.ini
-├── main.py
 ├── requirements.txt
+├── .env
 └── README.md
 ```
 
