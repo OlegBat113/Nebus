@@ -1,4 +1,7 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from typing import List
 from app.database.database import get_db
@@ -35,6 +38,16 @@ API_KEY = config['API_KEY']
 def verify_api_key(api_key: str):
     if api_key != API_KEY:
         raise HTTPException(status_code=403, detail="Invalid API Key")
+
+
+# Настройка шаблонов Jinja2
+templates = Jinja2Templates(directory="templates")
+
+
+# Главная страница -----------------------------------
+@router.get("/", response_class=HTMLResponse)
+def read_root(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
 
 # Возвращает список организаций по ID здания -----------------------------------
