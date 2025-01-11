@@ -22,15 +22,24 @@
                     <div class="card">
                         <div class="card-body">
                             <p class="card-text">список всех организаций находящихся в конкретном здании.</p>
-                            <div class="m-t-20">
-                                <div class="dropdown">
-                                    <button class="btn btn-default dropdown-toggle"  data-toggle="dropdown">
-                                        <span>Здание</span>
-                                    </button>
-                                    <div class="dropdown-menu">
-                                        <a class="dropdown-item" href="#">Action</a>
-                                        <a class="dropdown-item" href="#">Another action</a>
-                                        <a class="dropdown-item" href="#">Something else here</a>
+                            <div class="row">
+                                <div class="col-3">
+                                    <div class="m-20">
+                                        <div class="dropdown">
+                                            <button class="btn btn-default dropdown-toggle"  data-toggle="dropdown">
+                                                <span>Здание</span>
+                                            </button>
+                                            <div class="dropdown-menu">
+                                                <a class="dropdown-item" href="#">Action</a>
+                                                <a class="dropdown-item" href="#">Another action</a>
+                                                <a class="dropdown-item" href="#">Something else here</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-9">
+                                    <div class="m-20">
+                                        <button class="btn btn-success btn-rounded">Success</button>
                                     </div>
                                 </div>
                             </div>
@@ -41,21 +50,138 @@
                     <div class="card">
                         <div class="card-body">
                             <p class="card-text">список всех организаций, которые относятся к указанному виду деятельности.</p>
-                            <div class="m-t-20">
-                                <div class="dropdown">
-                                    <button class="btn btn-default dropdown-toggle"  data-toggle="dropdown">
-                                        <span>Деятельность</span>
-                                    </button>
-                                    <div class="dropdown-menu">
-                                        <a class="dropdown-item" href="#">Action</a>
-                                        <a class="dropdown-item" href="#">Another action</a>
-                                        <a class="dropdown-item" href="#">Something else here</a>
+                            <div class="row">
+                                <div class="col-3">
+                                    <div class="m-20">
+                                        <div class="dropdown">
+                                            <button class="btn btn-default dropdown-toggle"  data-toggle="dropdown">
+                                                <span>Деятельность</span>
+                                            </button>
+                                            <div class="dropdown-menu">
+                                                <a class="dropdown-item" href="#">Action</a>
+                                                <a class="dropdown-item" href="#">Another action</a>
+                                                <a class="dropdown-item" href="#">Something else here</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-9">
+                                    <div class="m-20">
+                                        <button class="btn btn-success btn-rounded">Success</button>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <p class="card-text">список организаций, которые находятся в заданном радиусе/прямоугольной области относительно указанной точки на карте. список зданий.</p>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="m-20">
+                                        <div class="dropdown">
+                                            <button class="btn btn-default dropdown-toggle"  data-toggle="dropdown">
+                                                <span>Здание</span>
+                                            </button>
+                                            <div class="dropdown-menu">
+                                                <a class="dropdown-item" href="#">Action</a>
+                                                <a class="dropdown-item" href="#">Another action</a>
+                                                <a class="dropdown-item" href="#">Something else here</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="m-20">
+                                        <div class="form-group">
+                                            <label class="control-label">Радиус (км)</label>
+                                            <input type="text" class="form-control form-control-sm" placeholder="radius">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="m-20">
+                                        <button class="btn btn-success btn-rounded">Success</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <p class="card-text">вывод информации об организации по её идентификатору.</p>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="m-20">
+                                        <div class="form-group">
+                                            <label class="control-label">Идентификатор организации.</label>
+                                            <input type="text" class="form-control form-control-sm" placeholder="id">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-9">
+                                    <div class="m-20">
+                                        <button class="btn btn-success btn-rounded">Success</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>           
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <p class="card-text">искать организации по виду деятельности (все вложенные).</p>
+                            <div class="row">
+                                <div class="col-3">
+                                    <div class="m-20">
+                                        <div class="dropdown">
+                                            <button class="btn btn-default dropdown-toggle"  data-toggle="dropdown">
+                                                <span>Деятельность</span>
+                                            </button>
+                                            <div class="dropdown-menu">
+                                                <a class="dropdown-item" href="#">Action</a>
+                                                <a class="dropdown-item" href="#">Another action</a>
+                                                <a class="dropdown-item" href="#">Something else here</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-9">
+                                    <div class="m-20">
+                                        <button class="btn btn-success btn-rounded">Success</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <p class="card-text">поиск организации по названию.</p>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="m-20">
+                                        <div class="form-group">
+                                            <label class="control-label">Название организации.</label>
+                                            <input type="text" class="form-control form-control-sm" placeholder="name">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-9">
+                                    <div class="m-20">
+                                        <button class="btn btn-success btn-rounded">Success</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>           
             </div>
         </div>
     </div>
