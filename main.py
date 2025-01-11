@@ -12,13 +12,15 @@ import uvicorn
 # Создание таблиц
 Base.metadata.create_all(bind=engine)
 
+# объект FastAPI
 app = FastAPI()
 
 # Настройка статических файлов
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# Подключение маршрутов
 app.include_router(router)
 
-
+# Запуск сервера
 if __name__ == "__main__":
     uvicorn.run("main:app", reload=True)

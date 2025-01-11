@@ -26,9 +26,17 @@
 </head>
 <body>
     <div class="container">
-        {% block content %}
-        {% endblock %}
+        <div class="main-content">
+            <div class="container-fluid">
+                <div class="page-header">
+                    <h2 class="header-title">Тестовое задание "Создание REST API приложения"</h2>
+                </div>                
+                {% block content %}
+                {% endblock %}
+            </div>
+        </div>
     </div>
+
     <!-- build:js assets/js/vendor.js -->
     <!-- core dependcies js -->
     <script src="{{ url_for('static', path='assets/vendor/jquery/dist/jquery.min.js') }}"></script>

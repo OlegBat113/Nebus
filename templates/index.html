@@ -1,33 +1,31 @@
 {% extends "base.html" %}
 
 {% block content %}        
-<h1>Hello, World!</h1>
-<p>Welcome to the FastAPI application with Bootstrap.</p>
+<div class="card">
+    <div class="card-body">
+        <h5>Описание.</h5>
+        <p>Необходимо реализовать REST API приложения для справочника Организаций, Зданий, Деятельности.
+            <form id="infoForm" action="/info" method="get">
+                <button class="btn btn-info btn-rounded" type="submit">Подробно</button>
+            </form>
+        </div>
+    </div>
+</div>
 
-        <!-- Верхняя часть для карточек и запросов -->
+<!-- Верхняя часть для карточек и запросов -->
+<div class="card">
+    <div class="card-body">
+        <h5>Запросы</h5>
         <div class="mb-4">
-            <h2>Информация</h2>
             <div class="row">
-                <div class="col-md-6">
+                <div class="col-md-12">
                     <div class="card">
                         <div class="card-body">
-                            <h5 class="card-title">Карточка 1</h5>
-                            <p class="card-text">Некоторый текст для первой карточки.</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">Карточка 2</h5>
-                            <p class="card-text">Некоторый текст для второй карточки.</p>
-                            <!-- Dropdown -->
-                            <h5 class="m-b-15">Basic Dropdown</h5>
-                            <p>Wrap the dropdown’s toggle (your button or link) and the dropdown menu within <code>.dropdown</code>, or another element that declares <code>position: relative;</code>. Dropdowns can be triggered from <code>&lt;a&gt;</code> or <code>&lt;button&gt;</code> elements to better fit your potential needs.</p>
+                            <p class="card-text">список всех организаций находящихся в конкретном здании.</p>
                             <div class="m-t-20">
                                 <div class="dropdown">
                                     <button class="btn btn-default dropdown-toggle"  data-toggle="dropdown">
-                                        <span>Dropdown button</span>
+                                        <span>Здание</span>
                                     </button>
                                     <div class="dropdown-menu">
                                         <a class="dropdown-item" href="#">Action</a>
@@ -36,25 +34,39 @@
                                     </div>
                                 </div>
                             </div>
-            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <p class="card-text">список всех организаций, которые относятся к указанному виду деятельности.</p>
+                            <div class="m-t-20">
+                                <div class="dropdown">
+                                    <button class="btn btn-default dropdown-toggle"  data-toggle="dropdown">
+                                        <span>Деятельность</span>
+                                    </button>
+                                    <div class="dropdown-menu">
+                                        <a class="dropdown-item" href="#">Action</a>
+                                        <a class="dropdown-item" href="#">Another action</a>
+                                        <a class="dropdown-item" href="#">Something else here</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-
-            <h2>Запросы</h2>
-            <form id="queryForm">
-                <div class="form-group">
-                    <label for="queryInput">Введите запрос:</label>
-                    <input type="text" class="form-control" id="queryInput" placeholder="Ваш запрос">
-                </div>
-                <button type="submit" class="btn btn-primary">Отправить</button>
-            </form>
         </div>
+    </div>
+</div>
 
 <!-- Нижняя часть для таблицы результатов -->
-<div>
-    <h2>Результаты</h2>
-    <table class="table">
+<div class="card">
+    <div class="card-body">
+        <h5>Результаты</h5>
+
+        <table class="table">
         <thead>
             <tr>
                 <th>ID</th>
@@ -65,6 +77,9 @@
         <tbody>
             <!-- Здесь будут динамически добавляться строки с результатами -->
         </tbody>
-    </table>
-</div>{% endblock %}
+        </table>
+    </div>
+</div>
+
+{% endblock %}
 

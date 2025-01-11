@@ -50,6 +50,12 @@ def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
+# Информация -----------------------------------
+@router.get("/info", response_class=HTMLResponse)
+def read_info(request: Request):
+    return templates.TemplateResponse("info.html", {"request": request})
+
+
 # Возвращает список организаций по ID здания -----------------------------------
 @router.get("/organizations/building/{building_id}", response_model=List[OrganizationSchema])
 def get_organizations_by_building(building_id: int, api_key: str, db: Session = Depends(get_db)):
