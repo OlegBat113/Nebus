@@ -1,16 +1,23 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-from databases import Database
+from sqlalchemy.orm import sessionmaker, Session
+from fastapi import Depends
 
-DATABASE_URL = "postgresql://user:password@localhost/dbname"  # Замените на ваш URL базы данных
+DATABASE_URL = "sqlite:///./test.db"  # Замените на ваш URL базы данных
 
-# Создание асинхронного подключения к базе данных
-database = Database(DATABASE_URL)
+# Создание движка базы данных
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 
+# Создание сессии базы данных
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Базовый класс для моделей
 Base = declarative_base()
 
 # Функция для получения сессии базы данных
-async def get_db():
-    async with database.transaction():
-        yield database
+def get_db():
+    db: Session = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
