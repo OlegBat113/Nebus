@@ -5,9 +5,9 @@ from typing import Optional, List
 # Схема для зданий -----------------------------------------------
 class BuildingSchema(BaseModel):
     id: int
-    address: str
-    latitude: str
-    longitude: str
+    address: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     class Config:
         orm_mode = True
 
@@ -33,7 +33,7 @@ class PhonesSchema(BaseModel):
 class OrganizationSchema(BaseModel):
     id: int
     name: str
-    address: str
+    address: Optional[str] = None
     phone_numbers: Optional[List[str]] = None
     activity: Optional[List[str]] = None
     class Config:
