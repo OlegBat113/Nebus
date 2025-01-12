@@ -200,7 +200,7 @@ def get_organizations_by_activity(activity_id: int, api_key: str, db: Session = 
 
     # Получение организаций по ID деятельности
     s = f"""
-            SELECT b.id, b.name, b.phone_numbers
+            SELECT b.id, b.name
             FROM organization_activity a
             LEFT JOIN organizations b ON (a.organization_id = b.id)
             WHERE a.activity_id = {activity_id}
@@ -209,7 +209,32 @@ def get_organizations_by_activity(activity_id: int, api_key: str, db: Session = 
     query = text(s)
     print(f"query: {query}")
     result = db.execute(query)
-    organizations = result.fetchall()  # Получаем все результаты
+    recs = result.fetchall()  # Получаем все результаты
+    organizations = []
+    for org_rec in recs:
+        print(f"org_rec: {org_rec}")
+
+        phones_list = get_phones(org_rec.id, db)
+        print(f"phones_list: {phones_list}")
+
+        activities = get_activities(org_rec.id, db)
+        print(f"ActivitiesSchema: {activities}")    
+        activities_names = []
+        for activity in activities:
+            activities_names.append(activity.name)
+
+        building = get_building(org_rec.id, db)
+        print(f"BuildingSchema: {building}")
+
+        organization = OrganizationSchema(
+            id=org_rec.id, 
+            name=org_rec.name, 
+            address=building.address,
+            phone_numbers=phones_list, 
+            activity=activities_names
+        )
+        print(f"OrganizationSchema: {organization}")
+        organizations.append(organization)
     return organizations
 
 
