@@ -18,4 +18,10 @@ class Activity(Base):
         return f"<Activity(name={self.name}, parent_id={self.parent_id})>"
 
 
-
+# Проверяет, можно ли добавить новую деятельность к родительской.
+    @classmethod
+    def can_add_activity(cls, parent_activity):
+        """Проверяет, можно ли добавить новую деятельность к родительской."""
+        if parent_activity.level < 3:  # Уровень вложенности не должен превышать 3
+            return True
+        return False 
