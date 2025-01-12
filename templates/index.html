@@ -53,7 +53,7 @@
                                     <div class="col-3">
                                         <div class="form-group">
                                             <label class="control-label">Выбор деятельности</label>
-                                                <select class="form-control">
+                                                <select class="form-control" id="activity_id1">
                                                     {% for activity in activities %}
                                                         <option value="{{ activity.id }}">[{{ activity.level }}] &nbsp; &nbsp; {{ activity.name }}</option>
                                                     {% endfor %}
@@ -187,8 +187,34 @@
 
 <script>
     const apiKey = '{{ api_key }}';
-    document.getElementById('buildForm1').addEventListener('submit', function(event) {
-        console.log('submit');
+    document.getElementById('activityForm1').addEventListener('submit', function(event) {
+        console.log('submit activityForm1 ...');
+    
+        // отмена действия по умолчанию
+        event.preventDefault();
+
+        const response = fetch('/organizations/activity', {
+            method: 'POST', // Или 'POST', в зависимости от вашего маршрута
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded', // Убедитесь, что заголовок правильный
+            },
+            body: new URLSearchParams({
+                'activity_id': document.getElementById('activity_id1').value,
+                'api_key': apiKey
+                })
+            })
+            .then(resp => resp.text())
+            .then(data => {
+                console.log('data', typeof data);
+                console.log('data', data);
+                var target = document.getElementById('result');
+                target.innerHTML = data;
+            })
+            .catch(error => {
+                console.error('Ошибка при получении данных:', error);
+            });
+    });    document.getElementById('buildForm1').addEventListener('submit', function(event) {
+        console.log('submit buildForm1 ...');
     
         // отмена действия по умолчанию
         event.preventDefault();
@@ -215,7 +241,7 @@
             });
     });
     document.getElementById('nearbyForm').addEventListener('submit', function(event) {
-        console.log('submit');
+        console.log('submit nearbyForm ...');
         // отмена действия по умолчанию
         event.preventDefault();
         const apiKey = 'key12345';
