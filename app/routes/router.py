@@ -46,7 +46,25 @@ templates = Jinja2Templates(directory="templates")
 # Главная страница -----------------------------------
 @router.get("/", response_class=HTMLResponse)
 def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    print(f"-> Главная страница: ...")
+    db: Session = get_db()
+
+    s = f"""
+        SELECT id, address
+        FROM buildings
+        order by address
+    """
+    query = text(s)
+    print(f"query: {query}")
+    print(f"db: {type(db)}")
+    result = db.execute(query)
+    recs = result.fetchall()
+    buildings = []
+    for rec in recs:
+        print(f"building_rec : {rec}")
+        buildings.append({"id": rec.id, "address": rec.address})
+
+    return templates.TemplateResponse("index.html", {"request": request, "buildings": buildings})
 
 
 # Информация -----------------------------------

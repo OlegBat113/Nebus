@@ -22,22 +22,25 @@
                     <div class="card">
                         <div class="card-body">
                             <p class="card-text">список всех организаций находящихся в конкретном здании.</p>
-                            <div class="row">
-                                <div class="col-3">
-                                    <div class="m-20">
-                                        <div class="dropdown">
-                                            <button class="btn btn-default dropdown-toggle"  data-toggle="dropdown">
-                                                <span>Здание</span>
-                                            </button>
-                                            <div class="dropdown-menu">
-                                                <a class="dropdown-item" href="/organizations/building/1?api_key=key12345">Action</a>
-                                                <a class="dropdown-item" href="/organizations/building/2?api_key=key12345">Another action</a>
-                                                <a class="dropdown-item" href="/organizations/building/3?api_key=key12345">Something else here</a>
-                                            </div>
+                            <form id="buildForm1" method="post" action="/organizations/building/">
+                                <div class="row">
+                                    <div class="col-3">
+                                        <div class="form-group">
+                                            <label class="control-label">Выбор здания</label>
+                                                <select class="form-control" id="building_id1">
+                                                    {% for building in buildings %}
+                                                        <option value="{{ building.id }}">{{ building.address }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="m-20">
+                                            <button type="submit" class="btn btn-success btn-rounded">Success</button>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -45,22 +48,25 @@
                     <div class="card">
                         <div class="card-body">
                             <p class="card-text">список всех организаций, которые относятся к указанному виду деятельности.</p>
-                            <div class="row">
-                                <div class="col-3">
-                                    <div class="m-20">
-                                        <div class="dropdown">
-                                            <button class="btn btn-default dropdown-toggle"  data-toggle="dropdown">
-                                                <span>Деятельность</span>
-                                            </button>
-                                            <div class="dropdown-menu">
-                                                <a class="dropdown-item" href="/organizations/activity/1?api_key=key12345">Action</a>
-                                                <a class="dropdown-item" href="/organizations/activity/2?api_key=key12345">Another action</a>
-                                                <a class="dropdown-item" href="/organizations/activity/3?api_key=key12345">Something else here</a>
-                                            </div>
+                            <form id="activityForm1" method="post" action="/organizations/activity/">
+                                <div class="row">
+                                    <div class="col-3">
+                                        <div class="form-group">
+                                            <label class="control-label">Выбор деятельности</label>
+                                                <select class="form-control">
+                                                    {% for activity in activities %}
+                                                    <option>{{ activity.id }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="m-20">
+                                            <button type="submit" class="btn btn-success btn-rounded">Success</button>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -178,6 +184,35 @@
 </div>
 
 <script>
+    const apiKey = 'key12345';
+    document.getElementById('buildForm1').addEventListener('submit', function(event) {
+    console.log('submit');
+    
+    // отмена действия по умолчанию
+    event.preventDefault();
+
+    const response = fetch('/organizations/nearby', {
+            method: 'POST', // Или 'POST', в зависимости от вашего маршрута
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded', // Убедитесь, что заголовок правильный
+            },
+            body: new URLSearchParams({
+                'building_id1': document.getElementById('building_id1').value,
+                'api_key': apiKey
+                })
+            })
+            .then(resp => resp.text())
+            .then(data => {
+                console.log('data', typeof data);
+                console.log('data', data);
+                var target = document.getElementById('result');
+                target.innerHTML = data;
+            })
+            .catch(error => {
+                console.error('Ошибка при получении данных:', error);
+            });
+
+    });
     document.getElementById('nearbyForm').addEventListener('submit', function(event) {
         console.log('submit');
         // отмена действия по умолчанию
