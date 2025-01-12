@@ -13,6 +13,7 @@ from app.models.building_organization import BuildingOrganization
 from app.models.phones import Phones
 from app.schemas.schemas import OrganizationSchema, ActivitySchema, PhonesSchema, BuildingSchema
 from sqlalchemy import func, text
+from sqlalchemy.orm import Session
 
 # Создание роутера
 router = APIRouter()
@@ -43,15 +44,18 @@ API_KEY = config['API_KEY']
 # Настройка шаблонов Jinja2
 templates = Jinja2Templates(directory="templates")
 
+
 # Возвращает список всех зданий из БД -----------------------------------
-def get_buildings(db: Session = Depends(get_db)) -> List[BuildingSchema]:
-    print(f"-> get_buildings: ...")
+def get_all_buildings() -> List[BuildingSchema]:
+    print(f"-> get_all_buildings: ...")
     s = f"""
         SELECT id, address, latitude, longitude
         FROM buildings
         order by address
     """
     query = text(s)
+    print(f"query: {query}")
+    db = get_db()
     result = db.execute(query)
     recs = result.fetchall()
     # Список всех зданий
@@ -88,8 +92,8 @@ def get_phones(organization_id: int, db: Session = Depends(get_db)) -> List[Phon
 
 
 # Возвращает адрес по  id организации -----------------------------------
-def get_building(organization_id: int, db: Session = Depends(get_db)) -> BuildingSchema:
-    print(f"-> get_building: organization_id={organization_id} ...")
+def get_building_by_organization_id(organization_id: int, db: Session = Depends(get_db)) -> BuildingSchema:
+    print(f"-> get_building_by_organization_id: organization_id={organization_id} ...")
     s = f"""
         SELECT c.id, c.address, c.latitude, c.longitude
         FROM building_organization a
@@ -103,11 +107,6 @@ def get_building(organization_id: int, db: Session = Depends(get_db)) -> Buildin
     if len(recs) == 0:
         return None
     rec = recs[0]
-    print(f"build_rec: {rec}")
-    print(f"build_rec[0]: {rec[0]}")
-    print(f"build_rec[1]: {rec[1]}")
-    print(f"build_rec[2]: {type(rec[2])}")
-    print(f"build_rec[3]: {rec[3]}")
     building = BuildingSchema(
         id=rec[0], 
         address=rec[1], 
@@ -117,37 +116,40 @@ def get_building(organization_id: int, db: Session = Depends(get_db)) -> Buildin
     print(f"BuildingSchema: {building}")
     return building
 
+
 # Возвращает список деятельностей организации -----------------------------------
-def get_activities(organization_id: int, db: Session = Depends(get_db)) -> List[ActivitySchema]:
+def get_activities(organization_id: Optional[int] = None) -> List[ActivitySchema]:
     print(f"-> get_activities: organization_id={organization_id} ...")
     s = f"""
         SELECT c.id, c.name, c.parent_id, c.level
         FROM organization_activity a 
-        LEFT JOIN activities c ON (a.activity_id = c.id) 
-        WHERE a.organization_id = {organization_id}
-        ORDER BY c.level, c.parent_id
+        LEFT JOIN activities c ON (a.activity_id = c.id)
     """
+    if organization_id is not None:
+        s += f" WHERE a.organization_id = {organization_id}"
+    s += f" ORDER BY c.level, c.parent_id"
     query = text(s)
     print(f"query: {query}")
+    db = get_db()
     result = db.execute(query)
     recs = result.fetchall()
-    print(f"recs: {recs}")
+    #print(f"recs: {recs}")
     activities = []
     for rec in recs:
-        print(f"rec: {rec}")
+        #print(f"rec: {rec}")
         activity = ActivitySchema(id=rec.id, name=rec.name, parent_id=rec.parent_id, level=rec.level)
-        print(f"activity: {activity}")
+        #print(f"activity: {activity}")
         activities.append(activity)
     return activities
 
 
-# Проверяет уровень вложенности для данной деятельности -----------------------------------
-def check_level(activity_id: int, db: Session) -> Optional[int]:
-    """Проверяет уровень вложенности для данной деятельности."""
+# Возвращает деятельность по ID -----------------------------------
+def get_activity(activity_id: int, db: Session) -> Optional[ActivitySchema]:
+    """Возвращает деятельность по ID."""
     activity = db.query(Activity).filter(Activity.id == activity_id).first()
     if activity is None:
         return None
-    return activity.level
+    return activity 
 
 
 # =======================================================================================
@@ -157,12 +159,27 @@ def read_root(request: Request):
     print(f"-> Главная страница: ...")
     db: Session = get_db()
     # Список всех зданий
-    buildings = get_buildings(db)
+    buildings = get_all_buildings()
+    activities = get_activities()
     buildings_list = []
+    activities_list = []
     for building in buildings:
-        print(f"building: {building}")
+        #print(f"building: {building}")
         buildings_list.append({"id": building.id, "address": building.address})
-    return templates.TemplateResponse("index.html", {"api_key": API_KEY, "request": request, "buildings": buildings_list})
+    for activity in activities:
+        #print(f"activity: {activity}")
+        activities_list.append({
+            "id": activity.id, 
+            "name": activity.name, 
+            "parent_id": activity.parent_id, 
+            "level": activity.level
+        })
+    data = {"api_key": API_KEY, 
+            "request": request, 
+            "buildings": buildings_list, 
+            "activities": activities_list
+            }
+    return templates.TemplateResponse("index.html", data)
 
 
 # Информация -----------------------------------
@@ -172,13 +189,13 @@ def read_info(request: Request):
 
 
 # Возвращает список организаций по ID здания -----------------------------------
-@router.post("/organizations/building")
+@router.post("/organizations/building", response_class=HTMLResponse)
 def get_organizations_by_building(
     building_id: int = Form(...),
     api_key: str = Form(...),  # API ключ
     db: Session = Depends(get_db)
-):
-    print(f"-> get_organizations_by_building: building_id={building_id} ...")
+) -> HTMLResponse:
+    print(f"-> (POST) get_organizations_by_building: building_id={building_id} ...")
 
     # Проверка API ключа
     verify_api_key(api_key)
@@ -230,7 +247,7 @@ def get_organizations_by_building(
         print(f"phones_list: {phones_list}")
 
         # Получение деятельностей организации
-        activities = get_activities(org_rec.id, db)
+        activities = get_activities(organization_id = org_rec.id)
         print(f"ActivitiesSchema: {activities}")
         # Список всех деятельностей организации
         activities_names = ""
@@ -240,7 +257,7 @@ def get_organizations_by_building(
             activities_names += f"[{activity.level}] {activity.name}<br>"
 
         # Получение адреса организации
-        building = get_building(org_rec.id, db)
+        building = get_building_by_organization_id(org_rec.id, db)
         print(f"BuildingSchema: {building}")
 
         # Формирование строки таблицы
@@ -269,14 +286,20 @@ def get_organizations_by_building(
 def add_activity(
     parent_id: int = Form(...),
     name: str = Form(...),
+    api_key: str = Form(...),
     db: Session = Depends(get_db)
 ) -> ActivitySchema:
-    print(f"-> add_activity: parent_id={parent_id}, name={name} ...")
     """Добавление новой деятельности с проверкой уровня вложенности."""
+    print(f"-> (POST) add_activity: parent_id={parent_id}, name={name} ...")
+
+    # Проверка API ключа
+    verify_api_key(api_key)
+
+    # Проверка уровня родителя деятельности
     if parent_id is not None:
-        level = check_level(parent_id, db)
-        if level is not None and level >= 3:
-            raise HTTPException(status_code=400, detail="ERROR: Уровень вложенности не должен превышать 3.")
+        activity = get_activity(parent_id, db)
+        if (activity is not None) and (activity.level >= 3):
+            raise HTTPException(status_code=400, detail="ERROR: Уровень вложенности родителя деятельности не должен превышать 3!")
 
     # Добавление новой деятельности
     new_activity = Activity(name=name, parent_id=parent_id)
@@ -287,13 +310,13 @@ def add_activity(
 
 
 # Возвращает список организаций по ID деятельности -----------------------------------
-@router.post("/organizations/activity")
+@router.post("/organizations/activity", response_class=HTMLResponse)
 def get_organizations_by_activity(
     activity_id: int = Form(...), 
     api_key: str = Form(...), 
     db: Session = Depends(get_db)
-):
-    print(f"-> get_organizations_by_activity: activity_id={activity_id} ...")
+) -> HTMLResponse:
+    print(f"-> (POST) get_organizations_by_activity: activity_id={activity_id} ...")
     # Проверка API ключа
     verify_api_key(api_key)
 
@@ -328,16 +351,19 @@ def get_organizations_by_activity(
     for org_rec in recs:
         print(f"org_rec: {org_rec}")
 
-        phones = get_phones(org_rec.id, db)
-        print(f"phones: {phones}")
+        phoneSchemas = get_phones(org_rec.id, db)
+        #print(f"phoneSchemas: {phoneSchemas}")
+        phones_list = ""
+        for phone in phoneSchemas:
+            phones_list += f"{phone.phone_number}<br>"
 
-        activities = get_activities(org_rec.id, db)
-        print(f"ActivitiesSchema: {activities}")    
+        activitySchemas = get_activities(organization_id = org_rec.id)
+        print(f"activitySchemas: {activitySchemas}")    
         activities_list = ""
-        for activity in activities:
-            activities_list += activity.name + ", "
+        for activity in activitySchemas:
+            activities_list += f"[{activity.level}] {activity.name}<br>"
 
-        building = get_building(org_rec.id, db)
+        building = get_building_by_organization_id(org_rec.id, db)
         print(f"BuildingSchema: {building}")
 
         sRow = f"""
@@ -345,7 +371,7 @@ def get_organizations_by_activity(
                 <td scope="row">{org_rec.id}</td>
                 <td>{org_rec.name}</td>
                 <td>{building.address}</td>
-                <td>{phones}</td>
+                <td>{phones_list}</td>
                 <td>{activities_list}</td>
             </tr>
         """
@@ -361,15 +387,15 @@ def get_organizations_by_activity(
 
 
 # Возвращает список организаций по координатам и радиусу -----------------------------------
-@router.post("/organizations/nearby")
+@router.post("/organizations/nearby", response_class=HTMLResponse)
 def get_organizations_nearby(
     latitude: float = Form(...), 
     longitude: float = Form(...), 
     radius: float = Form(...), 
     api_key: str = Form(...), 
     db: Session = Depends(get_db)
-):
-    print(f"-> get_organizations_nearby: latitude={latitude}, longitude={longitude}, radius={radius}, api_key={api_key} ...")
+) -> HTMLResponse:
+    print(f"-> (POST) get_organizations_nearby: latitude={latitude}, longitude={longitude}, radius={radius}, api_key={api_key} ...")
     verify_api_key(api_key)
 
     # Получение организаций по ID деятельности
@@ -391,13 +417,13 @@ def get_organizations_nearby(
         phones_list = get_phones(org_rec.id, db)
         print(f"phones_list: {phones_list}")
 
-        activities = get_activities(org_rec.id, db)
+        activities = get_activities(organization_id = org_rec.id)
         print(f"ActivitiesSchema: {activities}")    
         activities_names = []
         for activity in activities:
             activities_names.append(activity.name)
 
-        building = get_building(org_rec.id, db)
+        building = get_building_by_organization_id(org_rec.id, db)
         print(f"BuildingSchema: {building}")
 
         organization = OrganizationSchema(

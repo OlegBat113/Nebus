@@ -48,14 +48,14 @@
                     <div class="card">
                         <div class="card-body">
                             <p class="card-text">список всех организаций, которые относятся к указанному виду деятельности.</p>
-                            <form id="activityForm1" method="post" action="/organizations/activity/">
+                            <form id="activityForm1" method="post">
                                 <div class="row">
                                     <div class="col-3">
                                         <div class="form-group">
                                             <label class="control-label">Выбор деятельности</label>
                                                 <select class="form-control">
                                                     {% for activity in activities %}
-                                                    <option>{{ activity.id }}</option>
+                                                        <option value="{{ activity.id }}">[{{ activity.level }}] &nbsp; &nbsp; {{ activity.name }}</option>
                                                     {% endfor %}
                                                 </select>
                                         </div>
