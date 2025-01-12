@@ -15,6 +15,7 @@ class BuildingSchema(BaseModel):
 # Схема для деятельности -----------------------------------------------
 class ActivitySchema(BaseModel):
     id: int
+    level: int
     name: str
     parent_id: Optional[int] = None
     class Config:
@@ -24,7 +25,7 @@ class ActivitySchema(BaseModel):
 # Схема для телефонов -----------------------------------------------
 class PhonesSchema(BaseModel):
     organization_id: int
-    phone_number: Optional[List[str]] = None
+    phone_number: Optional[str] = None
     class Config:
         orm_mode = True
 

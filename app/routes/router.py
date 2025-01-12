@@ -43,26 +43,6 @@ API_KEY = config['API_KEY']
 # Настройка шаблонов Jinja2
 templates = Jinja2Templates(directory="templates")
 
-# Главная страница -----------------------------------
-@router.get("/", response_class=HTMLResponse)
-def read_root(request: Request):
-    print(f"-> Главная страница: ...")
-    db: Session = get_db()
-    # Список всех зданий
-    buildings = get_buildings(db)
-    buildings_list = []
-    for building in buildings:
-        print(f"building: {building}")
-        buildings_list.append({"id": building.id, "address": building.address})
-    return templates.TemplateResponse("index.html", {"api_key": API_KEY, "request": request, "buildings": buildings_list})
-
-
-# Информация -----------------------------------
-@router.get("/info", response_class=HTMLResponse)
-def read_info(request: Request):
-    return templates.TemplateResponse("info.html", {"request": request})
-
-
 # Возвращает список всех зданий из БД -----------------------------------
 def get_buildings(db: Session = Depends(get_db)) -> List[BuildingSchema]:
     print(f"-> get_buildings: ...")
@@ -85,7 +65,7 @@ def get_buildings(db: Session = Depends(get_db)) -> List[BuildingSchema]:
 
 
 # Возвращает список телефонов организации -----------------------------------
-def get_phones(organization_id: int, db: Session = Depends(get_db)) -> str:
+def get_phones(organization_id: int, db: Session = Depends(get_db)) -> List[PhonesSchema]:
     print(f"-> get_phones: organization_id={organization_id} ...")
     s = f"""
         SELECT p.phone_number
@@ -96,9 +76,13 @@ def get_phones(organization_id: int, db: Session = Depends(get_db)) -> str:
     print(f"query: {query}")
     result = db.execute(query)
     recs = result.fetchall()
-    phones = ""
+    phones = []
     for rec in recs:
-        phones += rec.phone_number + ", "
+        phone = PhonesSchema(
+            organization_id=organization_id, 
+            phone_number=rec.phone_number
+        )
+        phones.append(phone)
     print(f"phones: {phones}")
     return phones
 
@@ -137,10 +121,11 @@ def get_building(organization_id: int, db: Session = Depends(get_db)) -> Buildin
 def get_activities(organization_id: int, db: Session = Depends(get_db)) -> List[ActivitySchema]:
     print(f"-> get_activities: organization_id={organization_id} ...")
     s = f"""
-        SELECT c.id, c.name, c.parent_id 
+        SELECT c.id, c.name, c.parent_id, c.level
         FROM organization_activity a 
         LEFT JOIN activities c ON (a.activity_id = c.id) 
         WHERE a.organization_id = {organization_id}
+        ORDER BY c.level, c.parent_id
     """
     query = text(s)
     print(f"query: {query}")
@@ -150,12 +135,32 @@ def get_activities(organization_id: int, db: Session = Depends(get_db)) -> List[
     activities = []
     for rec in recs:
         print(f"rec: {rec}")
-        activity = ActivitySchema(id=rec.id, name=rec.name, parent_id=rec.parent_id)
+        activity = ActivitySchema(id=rec.id, name=rec.name, parent_id=rec.parent_id, level=rec.level)
         print(f"activity: {activity}")
         activities.append(activity)
     return activities
 
 # =======================================================================================
+# Главная страница -----------------------------------
+@router.get("/", response_class=HTMLResponse)
+def read_root(request: Request):
+    print(f"-> Главная страница: ...")
+    db: Session = get_db()
+    # Список всех зданий
+    buildings = get_buildings(db)
+    buildings_list = []
+    for building in buildings:
+        print(f"building: {building}")
+        buildings_list.append({"id": building.id, "address": building.address})
+    return templates.TemplateResponse("index.html", {"api_key": API_KEY, "request": request, "buildings": buildings_list})
+
+
+# Информация -----------------------------------
+@router.get("/info", response_class=HTMLResponse)
+def read_info(request: Request):
+    return templates.TemplateResponse("info.html", {"request": request})
+
+
 # Возвращает список организаций по ID здания -----------------------------------
 @router.post("/organizations/building")
 def get_organizations_by_building(
@@ -207,7 +212,11 @@ def get_organizations_by_building(
         print(f"org_rec: {org_rec}")
 
         # Получение телефонов организации
-        phones_list = get_phones(org_rec.id, db)
+        phones = get_phones(org_rec.id, db)
+        phones_list = ""
+        for phone in phones:
+            print(f"phone: {phone}")
+            phones_list += f"{phone.phone_number}<br>"
         print(f"phones_list: {phones_list}")
 
         # Получение деятельностей организации
@@ -218,7 +227,7 @@ def get_organizations_by_building(
         # Цикл по всем деятельностям
         for activity in activities:
             print(f"activity: {activity}")
-            activities_names += activity.name + ", "
+            activities_names += f"[{activity.level}] {activity.name}<br>"
 
         # Получение адреса организации
         building = get_building(org_rec.id, db)
@@ -246,8 +255,12 @@ def get_organizations_by_building(
 
 
 # Возвращает список организаций по ID деятельности -----------------------------------
-@router.get("/organizations/activity/{activity_id}", response_model=List[OrganizationSchema])
-def get_organizations_by_activity(activity_id: int, api_key: str, db: Session = Depends(get_db)):
+@router.post("/organizations/activity")
+def get_organizations_by_activity(
+    activity_id: int = Form(...), 
+    api_key: str = Form(...), 
+    db: Session = Depends(get_db)
+):
     print(f"-> get_organizations_by_activity: activity_id={activity_id} ...")
     # Проверка API ключа
     verify_api_key(api_key)
@@ -264,32 +277,55 @@ def get_organizations_by_activity(activity_id: int, api_key: str, db: Session = 
     print(f"query: {query}")
     result = db.execute(query)
     recs = result.fetchall()  # Получаем все результаты
-    organizations = []
+
+    # Формирование таблицы в HTML формате
+    sTable = """
+        <table class="table">
+            <thead class="thead-light">
+                <tr>
+                    <th scope="col">ID</th>
+                    <th scope="col">Название</th>
+                    <th scope="col">Адрес</th>
+                    <th scope="col">Телефоны</th>
+                    <th scope="col">Деятельности</th>
+                </tr>
+            </thead>
+            <tbody>
+    """    
+    # Цикл по всей выборке
     for org_rec in recs:
         print(f"org_rec: {org_rec}")
 
-        phones_list = get_phones(org_rec.id, db)
-        print(f"phones_list: {phones_list}")
+        phones = get_phones(org_rec.id, db)
+        print(f"phones: {phones}")
 
         activities = get_activities(org_rec.id, db)
         print(f"ActivitiesSchema: {activities}")    
-        activities_names = []
+        activities_list = ""
         for activity in activities:
-            activities_names.append(activity.name)
+            activities_list += activity.name + ", "
 
         building = get_building(org_rec.id, db)
         print(f"BuildingSchema: {building}")
 
-        organization = OrganizationSchema(
-            id=org_rec.id, 
-            name=org_rec.name, 
-            address=building.address,
-            phone_numbers=phones_list, 
-            activity=activities_names
-        )
-        print(f"OrganizationSchema: {organization}")
-        organizations.append(organization)
-    return organizations
+        sRow = f"""
+            <tr>
+                <td scope="row">{org_rec.id}</td>
+                <td>{org_rec.name}</td>
+                <td>{building.address}</td>
+                <td>{phones}</td>
+                <td>{activities_list}</td>
+            </tr>
+        """
+        sTable += sRow
+
+    # Закрытие таблицы
+    sTable += """
+            </tbody>
+        </table>
+    """
+    # Возвращаем таблицу в HTML формате
+    return HTMLResponse(content=sTable)
 
 
 # Возвращает список организаций по координатам и радиусу -----------------------------------
