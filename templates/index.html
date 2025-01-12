@@ -68,35 +68,27 @@
                     <div class="card">
                         <div class="card-body">
                             <p class="card-text">список организаций, которые находятся в заданном радиусе/прямоугольной области относительно указанной точки на карте. список зданий.</p>
-                            <div class="row">
-                                <div class="col-md-3">
-                                    <div class="m-20">
-                                        <div class="dropdown">
-                                            <button class="btn btn-default dropdown-toggle"  data-toggle="dropdown">
-                                                <span>Здание</span>
-                                            </button>
-                                            <div class="dropdown-menu">
-                                                <a class="dropdown-item" href="#">Action</a>
-                                                <a class="dropdown-item" href="#">Another action</a>
-                                                <a class="dropdown-item" href="#">Something else here</a>
+                            <form id="nearbyForm" method="post" action="/organizations/nearby/">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="m-20">
+                                            <div class="form-group">
+                                                <label class="control-label">latitude</label>
+                                                <input type="text" name="latitude" id="latitude" class="form-control form-control-sm" placeholder="latitude">
+                                                <label class="control-label">longitude</label>
+                                                <input type="text" name="longitude" id="longitude" class="form-control form-control-sm" placeholder="longitude">
+                                                <label class="control-label">Радиус (км)</label>
+                                                <input type="text" name="radius" id="radius" class="form-control form-control-sm" placeholder="radius">
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="m-20">
-                                        <div class="form-group">
-                                            <label class="control-label">Радиус (км)</label>
-                                            <input type="text" class="form-control form-control-sm" placeholder="radius">
+                                    <div class="col-md-3">
+                                        <div class="m-20">
+                                            <button type="submit" class="btn btn-success btn-rounded">Success</button>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="m-20">
-                                        <button class="btn btn-success btn-rounded">Success</button>
-                                    </div>
-                                </div>
-                            </div>
+                                </div>  <!-- row -->
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -196,6 +188,38 @@
         </table>
     </div>
 </div>
+
+<script>
+    document.getElementById('nearbyForm').addEventListener('submit', function(event) {
+        console.log('submit');
+        // отмена действия по умолчанию
+        event.preventDefault();
+        const apiKey = 'key12345';
+
+        console.log('latitude', document.getElementById('latitude').value);
+
+        const response = fetch('/organizations/nearby', {
+                method: 'POST', // Или 'POST', в зависимости от вашего маршрута
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded', // Убедитесь, что заголовок правильный
+                },
+                body: new URLSearchParams({
+                    'latitude': document.getElementById('latitude').value,
+                    'longitude': document.getElementById('longitude').value,
+                    'radius': document.getElementById('radius').value,
+                    'api_key': apiKey
+                })
+            })
+            .then(resp => resp.text())
+            .then(data => {
+                console.log('data', data);
+            })
+            .catch(error => {
+                console.error('Ошибка при получении данных:', error);
+            });
+
+    });
+</script>
 
 {% endblock %}
 

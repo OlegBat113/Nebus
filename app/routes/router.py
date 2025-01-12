@@ -1,5 +1,5 @@
-from fastapi import APIRouter, HTTPException, Depends, Request
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, HTTPException, Depends, Request, Form
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -239,25 +239,68 @@ def get_organizations_by_activity(activity_id: int, api_key: str, db: Session = 
 
 
 # Возвращает список организаций по координатам и радиусу -----------------------------------
-@router.get("/organizations/nearby", response_model=List[OrganizationSchema])
-def get_organizations_nearby(latitude: float, longitude: float, radius: float, api_key: str, db: Session = Depends(get_db)):
-    print(f"-> get_organizations_nearby: latitude={latitude}, longitude={longitude}, radius={radius} ...")
+@router.post("/organizations/nearby")
+def get_organizations_nearby(
+    latitude: float = Form(...), 
+    longitude: float = Form(...), 
+    radius: float = Form(...), 
+    api_key: str = Form(...), 
+    db: Session = Depends(get_db)
+):
+    print(f"-> get_organizations_nearby: latitude={latitude}, longitude={longitude}, radius={radius}, api_key={api_key} ...")
     verify_api_key(api_key)
-    organizations = db.query(Organization).filter(
-        func.sqrt(func.pow(Organization.latitude - latitude, 2) + func.pow(Organization.longitude - longitude, 2)) <= radius
-    ).all()
-    return organizations
 
+    # Получение организаций по ID деятельности
+    s = f"""
+            SELECT b.id, b.name
+            FROM organization_activity a
+            LEFT JOIN organizations b ON (a.organization_id = b.id)
+            WHERE a.activity_id = 2
+            ORDER BY b.name
+        """
+    query = text(s)
+    print(f"query: {query}")
+    result = db.execute(query)
+    recs = result.fetchall()  # Получаем все результаты
+    organizations = []
+    for org_rec in recs:
+        print(f"org_rec: {org_rec}")
+
+        phones_list = get_phones(org_rec.id, db)
+        print(f"phones_list: {phones_list}")
+
+        activities = get_activities(org_rec.id, db)
+        print(f"ActivitiesSchema: {activities}")    
+        activities_names = []
+        for activity in activities:
+            activities_names.append(activity.name)
+
+        building = get_building(org_rec.id, db)
+        print(f"BuildingSchema: {building}")
+
+        organization = OrganizationSchema(
+            id=org_rec.id, 
+            name=org_rec.name, 
+            address=building.address,
+            phone_numbers=phones_list, 
+            activity=activities_names
+        )
+        print(f"OrganizationSchema: {organization}")
+        organizations.append(organization)
+    return organizations
 
 # Возвращает организацию по ID -----------------------------------
 @router.get("/organizations/{organization_id}", response_model=OrganizationSchema)
 def get_organization_by_id(organization_id: int, api_key: str, db: Session = Depends(get_db)):
     print(f"-> get_organization_by_id: organization_id={organization_id} ...")
     verify_api_key(api_key)
-    organization = db.query(Organization).filter(Organization.id == organization_id).first()
-    if not organization:
-        raise HTTPException(status_code=404, detail="Organization not found")
-    return organization
+    
+    #organization = db.query(Organization).filter(Organization.id == organization_id).first()
+    #if not organization:
+    #    raise HTTPException(status_code=404, detail="Organization not found")
+    #return organization
+    
+    return 'return from get_organization_by_id'
 
 
 # Возвращает организации по названию деятельности -----------------------------------
@@ -278,3 +321,4 @@ def search_organizations_by_name(name: str, api_key: str, db: Session = Depends(
     verify_api_key(api_key)
     organizations = db.query(Organization).filter(Organization.name.ilike(f"%{name}%")).all()
     return organizations
+
