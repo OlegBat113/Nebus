@@ -177,27 +177,29 @@
 
 <!-- Нижняя часть для таблицы результатов -->
 <div class="card">
-    <div class="card-body">
-        <h5>Результаты</h5>
+    <div class="card-header border bottom">
+        <h4 class="card-title">Таблица результатов выборки</h4>
+    </div>
+<div class="card-body">
         <div id="result"></div>
     </div>
 </div>
 
 <script>
-    const apiKey = 'key12345';
+    const apiKey = '{{ api_key }}';
     document.getElementById('buildForm1').addEventListener('submit', function(event) {
-    console.log('submit');
+        console.log('submit');
     
-    // отмена действия по умолчанию
-    event.preventDefault();
+        // отмена действия по умолчанию
+        event.preventDefault();
 
-    const response = fetch('/organizations/nearby', {
+        const response = fetch('/organizations/building', {
             method: 'POST', // Или 'POST', в зависимости от вашего маршрута
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded', // Убедитесь, что заголовок правильный
             },
             body: new URLSearchParams({
-                'building_id1': document.getElementById('building_id1').value,
+                'building_id': document.getElementById('building_id1').value,
                 'api_key': apiKey
                 })
             })
@@ -211,7 +213,6 @@
             .catch(error => {
                 console.error('Ошибка при получении данных:', error);
             });
-
     });
     document.getElementById('nearbyForm').addEventListener('submit', function(event) {
         console.log('submit');

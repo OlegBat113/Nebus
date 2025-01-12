@@ -48,23 +48,13 @@ templates = Jinja2Templates(directory="templates")
 def read_root(request: Request):
     print(f"-> Главная страница: ...")
     db: Session = get_db()
-
-    s = f"""
-        SELECT id, address
-        FROM buildings
-        order by address
-    """
-    query = text(s)
-    print(f"query: {query}")
-    print(f"db: {type(db)}")
-    result = db.execute(query)
-    recs = result.fetchall()
-    buildings = []
-    for rec in recs:
-        print(f"building_rec : {rec}")
-        buildings.append({"id": rec.id, "address": rec.address})
-
-    return templates.TemplateResponse("index.html", {"request": request, "buildings": buildings})
+    # Список всех зданий
+    buildings = get_buildings(db)
+    buildings_list = []
+    for building in buildings:
+        print(f"building: {building}")
+        buildings_list.append({"id": building.id, "address": building.address})
+    return templates.TemplateResponse("index.html", {"api_key": API_KEY, "request": request, "buildings": buildings_list})
 
 
 # Информация -----------------------------------
@@ -73,8 +63,29 @@ def read_info(request: Request):
     return templates.TemplateResponse("info.html", {"request": request})
 
 
-# Возвращает список тестовых организаций -----------------------------------
-def get_phones(organization_id: int, db: Session = Depends(get_db)) -> List[str]:
+# Возвращает список всех зданий из БД -----------------------------------
+def get_buildings(db: Session = Depends(get_db)) -> List[BuildingSchema]:
+    print(f"-> get_buildings: ...")
+    s = f"""
+        SELECT id, address, latitude, longitude
+        FROM buildings
+        order by address
+    """
+    query = text(s)
+    result = db.execute(query)
+    recs = result.fetchall()
+    # Список всех зданий
+    buildings = []
+    for rec in recs:
+        #print(f"rec: {rec}")
+        # Создание объекта BuildingSchema
+        building = BuildingSchema(id=rec.id, address=rec.address, latitude=rec.latitude, longitude=rec.longitude)
+        buildings.append(building)
+    return buildings
+
+
+# Возвращает список телефонов организации -----------------------------------
+def get_phones(organization_id: int, db: Session = Depends(get_db)) -> str:
     print(f"-> get_phones: organization_id={organization_id} ...")
     s = f"""
         SELECT p.phone_number
@@ -85,9 +96,9 @@ def get_phones(organization_id: int, db: Session = Depends(get_db)) -> List[str]
     print(f"query: {query}")
     result = db.execute(query)
     recs = result.fetchall()
-    phones = []
+    phones = ""
     for rec in recs:
-        phones.append(rec.phone_number)
+        phones += rec.phone_number + ", "
     print(f"phones: {phones}")
     return phones
 
@@ -144,11 +155,16 @@ def get_activities(organization_id: int, db: Session = Depends(get_db)) -> List[
         activities.append(activity)
     return activities
 
-
+# =======================================================================================
 # Возвращает список организаций по ID здания -----------------------------------
-@router.get("/organizations/building/{building_id}", response_model=List[OrganizationSchema])
-def get_organizations_by_building(building_id: int, api_key: str, db: Session = Depends(get_db)):
+@router.post("/organizations/building")
+def get_organizations_by_building(
+    building_id: int = Form(...),
+    api_key: str = Form(...),  # API ключ
+    db: Session = Depends(get_db)
+):
     print(f"-> get_organizations_by_building: building_id={building_id} ...")
+
     # Проверка API ключа
     verify_api_key(api_key)
 
@@ -172,6 +188,20 @@ def get_organizations_by_building(building_id: int, api_key: str, db: Session = 
     # Список всех организаций в здании (тип будет List[OrganizationSchema])
     organizations = []
 
+    # Формирование таблицы в HTML формате
+    sTable = """
+        <table class="table">
+            <thead class="thead-light">
+                <tr>
+                    <th scope="col">ID</th>
+                    <th scope="col">Название</th>
+                    <th scope="col">Адрес</th>
+                    <th scope="col">Телефоны</th>
+                    <th scope="col">Деятельности</th>
+                </tr>
+            </thead>
+            <tbody>
+    """
     # Цикл по всей выборке
     for org_rec in recs:
         print(f"org_rec: {org_rec}")
@@ -184,29 +214,35 @@ def get_organizations_by_building(building_id: int, api_key: str, db: Session = 
         activities = get_activities(org_rec.id, db)
         print(f"ActivitiesSchema: {activities}")
         # Список всех деятельностей организации
-        activities_names = []
+        activities_names = ""
         # Цикл по всем деятельностям
         for activity in activities:
             print(f"activity: {activity}")
-            activities_names.append(activity.name)
+            activities_names += activity.name + ", "
 
         # Получение адреса организации
         building = get_building(org_rec.id, db)
         print(f"BuildingSchema: {building}")
 
-        # Создание организации по схеме
-        organization = OrganizationSchema(
-            id=org_rec.id, 
-            name=org_rec.name, 
-            address=building.address,
-            phone_numbers=phones_list, 
-            activity=activities_names
-        )
-        print(f"OrganizationSchema: {organization}")
+        # Формирование строки таблицы
+        sRow = f"""
+            <tr>
+                <td scope="row">{org_rec.id}</td>
+                <td>{org_rec.name}</td>
+                <td>{building.address}</td>
+                <td>{phones_list}</td>
+                <td>{activities_names}</td>
+            </tr>
+        """
+        sTable += sRow
 
-        # Добавление этой организации в общий список организаций
-        organizations.append(organization)
-    return organizations
+    # Закрытие таблицы
+    sTable += """
+            </tbody>
+        </table>
+    """
+    # Возвращаем таблицу в HTML формате
+    return HTMLResponse(content=sTable)
 
 
 # Возвращает список организаций по ID деятельности -----------------------------------
