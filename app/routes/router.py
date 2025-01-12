@@ -287,7 +287,30 @@ def get_organizations_nearby(
         )
         print(f"OrganizationSchema: {organization}")
         organizations.append(organization)
-    return organizations
+    #return organizations
+    s = """
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Название</th>
+                    <th>Адрес</th>
+                    <th>Телефоны</th>
+                    <th>Деятельности</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1 колонка</td>
+                    <td>2 колонка</td>
+                    <td>3 колонка</td>
+                    <td>4 колонка</td>
+                    <td>5 колонка</td>
+                </tr>
+            </tbody>
+        </table>
+    """
+    return HTMLResponse(content=s)
 
 # Возвращает организацию по ID -----------------------------------
 @router.get("/organizations/{organization_id}", response_model=OrganizationSchema)
@@ -300,7 +323,7 @@ def get_organization_by_id(organization_id: int, api_key: str, db: Session = Dep
     #    raise HTTPException(status_code=404, detail="Organization not found")
     #return organization
     
-    return 'return from get_organization_by_id'
+    return HTMLResponse(content='<div>return from get_organization_by_id</div>')
 
 
 # Возвращает организации по названию деятельности -----------------------------------

@@ -173,19 +173,7 @@
 <div class="card">
     <div class="card-body">
         <h5>Результаты</h5>
-
-        <table class="table">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Название</th>
-                <th>Описание</th>
-            </tr>
-        </thead>
-        <tbody>
-            <!-- Здесь будут динамически добавляться строки с результатами -->
-        </tbody>
-        </table>
+        <div id="result"></div>
     </div>
 </div>
 
@@ -212,7 +200,10 @@
             })
             .then(resp => resp.text())
             .then(data => {
+                console.log('data', typeof data);
                 console.log('data', data);
+                var target = document.getElementById('result');
+                target.innerHTML = data;
             })
             .catch(error => {
                 console.error('Ошибка при получении данных:', error);
