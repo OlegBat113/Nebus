@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from app.database.database import get_db
 from app.models.organization import Organization
 from app.models.building import Building
@@ -140,6 +140,16 @@ def get_activities(organization_id: int, db: Session = Depends(get_db)) -> List[
         activities.append(activity)
     return activities
 
+
+# Проверяет уровень вложенности для данной деятельности -----------------------------------
+def check_level(activity_id: int, db: Session) -> Optional[int]:
+    """Проверяет уровень вложенности для данной деятельности."""
+    activity = db.query(Activity).filter(Activity.id == activity_id).first()
+    if activity is None:
+        return None
+    return activity.level
+
+
 # =======================================================================================
 # Главная страница -----------------------------------
 @router.get("/", response_class=HTMLResponse)
@@ -252,6 +262,28 @@ def get_organizations_by_building(
     """
     # Возвращаем таблицу в HTML формате
     return HTMLResponse(content=sTable)
+
+
+# Добавление новой деятельности -----------------------------------
+@router.post("/add_activity/", response_model=ActivitySchema)
+def add_activity(
+    parent_id: int = Form(...),
+    name: str = Form(...),
+    db: Session = Depends(get_db)
+) -> ActivitySchema:
+    print(f"-> add_activity: parent_id={parent_id}, name={name} ...")
+    """Добавление новой деятельности с проверкой уровня вложенности."""
+    if parent_id is not None:
+        level = check_level(parent_id, db)
+        if level is not None and level >= 3:
+            raise HTTPException(status_code=400, detail="ERROR: Уровень вложенности не должен превышать 3.")
+
+    # Добавление новой деятельности
+    new_activity = Activity(name=name, parent_id=parent_id)
+    db.add(new_activity)
+    db.commit()
+    db.refresh(new_activity)
+    return new_activity
 
 
 # Возвращает список организаций по ID деятельности -----------------------------------
