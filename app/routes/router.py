@@ -14,7 +14,7 @@ from app.models.phones import Phones
 from app.schemas.schemas import OrganizationSchema, ActivitySchema, PhonesSchema, BuildingSchema
 from sqlalchemy import func, text
 from sqlalchemy.orm import Session
-
+import math
 # Создание роутера
 router = APIRouter()
 
@@ -65,17 +65,19 @@ def get_all_buildings() -> List[BuildingSchema]:
         # Создание объекта BuildingSchema
         building = BuildingSchema(id=rec.id, address=rec.address, latitude=rec.latitude, longitude=rec.longitude)
         buildings.append(building)
+    db.close()
     return buildings
 
 
 # Возвращает список телефонов организации -----------------------------------
-def get_phones(organization_id: int, db: Session = Depends(get_db)) -> List[PhonesSchema]:
+def get_phones(organization_id: int) -> List[PhonesSchema]:
     print(f"-> get_phones: organization_id={organization_id} ...")
     s = f"""
         SELECT p.phone_number
         FROM phones p
         WHERE p.organization_id = {organization_id}
     """
+    db = get_db()
     query = text(s)
     print(f"query: {query}")
     result = db.execute(query)
@@ -88,11 +90,13 @@ def get_phones(organization_id: int, db: Session = Depends(get_db)) -> List[Phon
         )
         phones.append(phone)
     print(f"phones: {phones}")
+    print(f"End get_phones() -> ...")
+    db.close()
     return phones
 
 
 # Возвращает адрес по  id организации -----------------------------------
-def get_building_by_organization_id(organization_id: int, db: Session = Depends(get_db)) -> BuildingSchema:
+def get_building_by_organization_id(organization_id: int) -> BuildingSchema:
     print(f"-> get_building_by_organization_id: organization_id={organization_id} ...")
     s = f"""
         SELECT c.id, c.address, c.latitude, c.longitude
@@ -100,6 +104,7 @@ def get_building_by_organization_id(organization_id: int, db: Session = Depends(
         LEFT JOIN buildings c ON c.id = a.building_id
         WHERE a.organization_id = {organization_id}
     """
+    db = get_db()
     query = text(s)
     print(f"query: {query}")
     result = db.execute(query)
@@ -114,6 +119,8 @@ def get_building_by_organization_id(organization_id: int, db: Session = Depends(
         longitude=rec[3]
     )
     print(f"BuildingSchema: {building}")
+    print(f"End get_building_by_organization_id() -> ...")
+    db.close()
     return building
 
 
@@ -136,20 +143,65 @@ def get_activities(organization_id: Optional[int] = None) -> List[ActivitySchema
     #print(f"recs: {recs}")
     activities = []
     for rec in recs:
-        #print(f"rec: {rec}")
+        print(f"rec: {rec}")
         activity = ActivitySchema(id=rec.id, name=rec.name, parent_id=rec.parent_id, level=rec.level)
-        #print(f"activity: {activity}")
+        print(f"activity: {activity}")
         activities.append(activity)
+    print(f"End get_activities() -> ...")
+    db.close()
     return activities
 
 
 # Возвращает деятельность по ID -----------------------------------
-def get_activity(activity_id: int, db: Session) -> Optional[ActivitySchema]:
+def get_activity(activity_id: int) -> Optional[ActivitySchema]:
     """Возвращает деятельность по ID."""
+    db = get_db()
     activity = db.query(Activity).filter(Activity.id == activity_id).first()
+    db.close()
     if activity is None:
         return None
     return activity 
+
+
+# расстояние между двумя точками (в метрах) по координатам широты и долготы (в градусах) ---------------------
+def distance(lat1, lon1, lat2, lon2):
+    # параметры
+    # lat1, lon1 - координаты первой точки
+    # lat2, lon2 - координаты второй точки
+    # R - радиус Земли
+    # dLat - разница широт
+    # dLon - разница долгот
+    # a - промежуточная переменная
+    # c - промежуточная переменная
+
+    R = 6371000
+    dLat = (lat2 - lat1) * math.pi / 180.0
+    dLon = (lon2 - lon1) * math.pi / 180.0
+    
+    # формула Гаусса
+    a = math.sin(dLat / 2) * math.sin(dLat / 2) + math.cos(lat1 * math.pi / 180.0) * math.cos(lat2 * math.pi / 180.0) * math.sin(dLon / 2) * math.sin(dLon / 2)
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
+
+
+# Возвращает список организаций по ID здания -----------------------------------
+def get_organizations_by_building(building_id: int):
+    print(f"-> get_organizations_by_building: building_id={building_id} ...")
+    s = f"""
+        SELECT b.id, b.name, c.address
+        FROM building_organization a 
+        LEFT JOIN organizations b ON b.id = a.organization_id 
+        LEFT JOIN buildings c ON c.id = a.building_id
+        WHERE a.building_id = {building_id} 
+        ORDER BY b.name
+    """
+    db = get_db()
+    query = text(s)
+    print(f"query: {query}")
+    result = db.execute(query)
+    recs = result.fetchall()
+    db.close()
+    return recs
 
 
 # =======================================================================================
@@ -190,32 +242,18 @@ def read_info(request: Request):
 
 # Возвращает список организаций по ID здания -----------------------------------
 @router.post("/organizations/building", response_class=HTMLResponse)
-def get_organizations_by_building(
+def post_organizations_by_building(
     building_id: int = Form(...),
     api_key: str = Form(...),  # API ключ
     db: Session = Depends(get_db)
 ) -> HTMLResponse:
-    print(f"-> (POST) get_organizations_by_building: building_id={building_id} ...")
+    print(f"-> (POST) post_organizations_by_building: building_id={building_id} ...")
 
     # Проверка API ключа
     verify_api_key(api_key)
 
     # Получение списка организаций по ID здания
-    s = f"""
-        SELECT b.id, b.name, c.address
-        FROM building_organization a 
-        LEFT JOIN organizations b ON b.id = a.organization_id 
-        LEFT JOIN buildings c ON c.id = a.building_id
-        WHERE a.building_id = {building_id} 
-        ORDER BY b.name
-    """
-    # Формирование запроса
-    query = text(s)
-    print(f"query: {query}")
-
-    # Выполнение запроса
-    result = db.execute(query)
-    recs = result.fetchall()  # Получаем все результаты
+    recs = get_organizations_by_building(building_id)
 
     # Список всех организаций в здании (тип будет List[OrganizationSchema])
     organizations = []
@@ -239,7 +277,7 @@ def get_organizations_by_building(
         print(f"org_rec: {org_rec}")
 
         # Получение телефонов организации
-        phones = get_phones(org_rec.id, db)
+        phones = get_phones(org_rec.id)
         phones_list = ""
         for phone in phones:
             print(f"phone: {phone}")
@@ -257,7 +295,7 @@ def get_organizations_by_building(
             activities_names += f"[{activity.level}] {activity.name}<br>"
 
         # Получение адреса организации
-        building = get_building_by_organization_id(org_rec.id, db)
+        building = get_building_by_organization_id(org_rec.id)
         print(f"BuildingSchema: {building}")
 
         # Формирование строки таблицы
@@ -297,7 +335,7 @@ def add_activity(
 
     # Проверка уровня родителя деятельности
     if parent_id is not None:
-        activity = get_activity(parent_id, db)
+        activity = get_activity(parent_id)
         if (activity is not None) and (activity.level >= 3):
             raise HTTPException(status_code=400, detail="ERROR: Уровень вложенности родителя деятельности не должен превышать 3!")
 
@@ -311,7 +349,7 @@ def add_activity(
 
 # Возвращает список организаций по ID деятельности -----------------------------------
 @router.post("/organizations/activity", response_class=HTMLResponse)
-def get_organizations_by_activity(
+def post_organizations_by_activity(
     activity_id: int = Form(...), 
     api_key: str = Form(...), 
     db: Session = Depends(get_db)
@@ -351,7 +389,7 @@ def get_organizations_by_activity(
     for org_rec in recs:
         print(f"org_rec: {org_rec}")
 
-        phoneSchemas = get_phones(org_rec.id, db)
+        phoneSchemas = get_phones(org_rec.id)
         #print(f"phoneSchemas: {phoneSchemas}")
         phones_list = ""
         for phone in phoneSchemas:
@@ -363,7 +401,7 @@ def get_organizations_by_activity(
         for activity in activitySchemas:
             activities_list += f"[{activity.level}] {activity.name}<br>"
 
-        building = get_building_by_organization_id(org_rec.id, db)
+        building = get_building_by_organization_id(org_rec.id)
         print(f"BuildingSchema: {building}")
 
         sRow = f"""
@@ -388,7 +426,7 @@ def get_organizations_by_activity(
 
 # Возвращает список организаций по координатам и радиусу -----------------------------------
 @router.post("/organizations/nearby", response_class=HTMLResponse)
-def get_organizations_nearby(
+def post_organizations_nearby(
     latitude: float = Form(...), 
     longitude: float = Form(...), 
     radius: float = Form(...), 
@@ -398,67 +436,66 @@ def get_organizations_nearby(
     print(f"-> (POST) get_organizations_nearby: latitude={latitude}, longitude={longitude}, radius={radius}, api_key={api_key} ...")
     verify_api_key(api_key)
 
-    # Получение организаций по ID деятельности
-    s = f"""
-            SELECT b.id, b.name
-            FROM organization_activity a
-            LEFT JOIN organizations b ON (a.organization_id = b.id)
-            WHERE a.activity_id = 2
-            ORDER BY b.name
-        """
-    query = text(s)
-    print(f"query: {query}")
-    result = db.execute(query)
-    recs = result.fetchall()  # Получаем все результаты
-    organizations = []
-    for org_rec in recs:
-        print(f"org_rec: {org_rec}")
+    buildings = db.query(Building).all()
+    print(f"all buildings: {buildings}")
 
-        phones_list = get_phones(org_rec.id, db)
-        print(f"phones_list: {phones_list}")
-
-        activities = get_activities(organization_id = org_rec.id)
-        print(f"ActivitiesSchema: {activities}")    
-        activities_names = []
-        for activity in activities:
-            activities_names.append(activity.name)
-
-        building = get_building_by_organization_id(org_rec.id, db)
-        print(f"BuildingSchema: {building}")
-
-        organization = OrganizationSchema(
-            id=org_rec.id, 
-            name=org_rec.name, 
-            address=building.address,
-            phone_numbers=phones_list, 
-            activity=activities_names
-        )
-        print(f"OrganizationSchema: {organization}")
-        organizations.append(organization)
-    #return organizations
-    s = """
-        <table>
-            <thead>
+    # Формирование таблицы в HTML формате
+    sTable = """
+        <table class="table">
+            <thead class="thead-light">
                 <tr>
-                    <th>ID</th>
-                    <th>Название</th>
-                    <th>Адрес</th>
-                    <th>Телефоны</th>
-                    <th>Деятельности</th>
+                    <th scope="col">ID</th>
+                    <th scope="col">Название</th>
+                    <th scope="col">Адрес</th>
+                    <th scope="col">Телефоны</th>
+                    <th scope="col">Деятельности</th>
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>1 колонка</td>
-                    <td>2 колонка</td>
-                    <td>3 колонка</td>
-                    <td>4 колонка</td>
-                    <td>5 колонка</td>
-                </tr>
+    """    
+    for building in buildings:
+        print(f"building: {building}")
+        # расстояние в километрах
+        d = distance(latitude, longitude, building.latitude, building.longitude)/1000
+        print(f"distance: {d}")
+        # если расстояние меньше радиуса, то добавляем в список
+        if d <= radius:
+            print(f"building: {building.id}, {building.address}, {round(d, 1)} км.")
+            organizations = get_organizations_by_building(building.id)
+            print(f"all organizations in building: {organizations}")
+            for organization in organizations:
+                print(f"organization: {organization}")
+                phoneSchemas = get_phones(organization.id)
+                #print(f"phoneSchemas: {phoneSchemas}")
+                phones_list = ""
+                for phone in phoneSchemas:
+                    phones_list += f"{phone.phone_number}<br>"
+
+                activitySchemas = get_activities(organization_id = organization.id)
+                print(f"activitySchemas: {activitySchemas}")    
+                activities_list = ""
+                for activity in activitySchemas:
+                    activities_list += f"[{activity.level}] {activity.name}<br>"
+
+                sRow = f"""
+                    <tr>
+                        <td scope="row">{organization.id}</td>
+                        <td>{organization.name}</td>
+                        <td>{building.address} ({round(d, 1)} км.)</td>
+                        <td>{phones_list}</td>
+                        <td>{activities_list}</td>
+                    </tr>
+                """
+                sTable += sRow
+
+    # Закрытие таблицы
+    sTable += """
             </tbody>
         </table>
     """
-    return HTMLResponse(content=s)
+    # Возвращаем таблицу в HTML формате
+    return HTMLResponse(content=sTable)
+
 
 # Возвращает организацию по ID -----------------------------------
 @router.get("/organizations/{organization_id}", response_model=OrganizationSchema)
