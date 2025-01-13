@@ -46,7 +46,7 @@ templates = Jinja2Templates(directory="templates")
 
 
 # Возвращает список всех зданий из БД -----------------------------------
-def get_all_buildings() -> List[BuildingSchema]:
+def get_all_buildings(db: Session) -> List[BuildingSchema]:
     print(f"-> get_all_buildings: ...")
     s = f"""
         SELECT id, address, latitude, longitude
@@ -55,7 +55,6 @@ def get_all_buildings() -> List[BuildingSchema]:
     """
     query = text(s)
     print(f"query: {query}")
-    db = get_db()
     result = db.execute(query)
     recs = result.fetchall()
     # Список всех зданий
@@ -65,7 +64,6 @@ def get_all_buildings() -> List[BuildingSchema]:
         # Создание объекта BuildingSchema
         building = BuildingSchema(id=rec.id, address=rec.address, latitude=rec.latitude, longitude=rec.longitude)
         buildings.append(building)
-    db.close()
     return buildings
 
 
@@ -125,7 +123,7 @@ def get_building_by_organization_id(organization_id: int) -> BuildingSchema:
 
 
 # Возвращает список деятельностей организации -----------------------------------
-def get_activities(organization_id: Optional[int] = None) -> List[ActivitySchema]:
+def get_activities(db: Session, organization_id: Optional[int] = None) -> List[ActivitySchema]:
     print(f"-> get_activities: organization_id={organization_id} ...")
     s = f"""
         SELECT c.id, c.name, c.parent_id, c.level
@@ -137,7 +135,6 @@ def get_activities(organization_id: Optional[int] = None) -> List[ActivitySchema
     s += f" ORDER BY c.level, c.parent_id"
     query = text(s)
     print(f"query: {query}")
-    db = get_db()
     result = db.execute(query)
     recs = result.fetchall()
     #print(f"recs: {recs}")
@@ -148,7 +145,6 @@ def get_activities(organization_id: Optional[int] = None) -> List[ActivitySchema
         print(f"activity: {activity}")
         activities.append(activity)
     print(f"End get_activities() -> ...")
-    db.close()
     return activities
 
 
@@ -204,15 +200,22 @@ def get_organizations_by_building(building_id: int):
     return recs
 
 
+# Возвращает организацию по ID -----------------------------------
+def get_organization(organization_id: int) -> OrganizationSchema:
+    db = get_db()
+    organization = db.query(Organization).filter(Organization.id == organization_id).first()
+    db.close()
+    return organization
+
+
 # =======================================================================================
 # Главная страница -----------------------------------
 @router.get("/", response_class=HTMLResponse)
-def read_root(request: Request):
+def read_root(request: Request, db: Session = Depends(get_db)):
     print(f"-> Главная страница: ...")
-    db: Session = get_db()
     # Список всех зданий
-    buildings = get_all_buildings()
-    activities = get_activities()
+    buildings = get_all_buildings(db)
+    activities = get_activities(db)
     buildings_list = []
     activities_list = []
     for building in buildings:
@@ -285,7 +288,7 @@ def post_organizations_by_building(
         print(f"phones_list: {phones_list}")
 
         # Получение деятельностей организации
-        activities = get_activities(organization_id = org_rec.id)
+        activities = get_activities(organization_id = org_rec.id, db=db)
         print(f"ActivitiesSchema: {activities}")
         # Список всех деятельностей организации
         activities_names = ""
@@ -395,7 +398,7 @@ def post_organizations_by_activity(
         for phone in phoneSchemas:
             phones_list += f"{phone.phone_number}<br>"
 
-        activitySchemas = get_activities(organization_id = org_rec.id)
+        activitySchemas = get_activities(organization_id = org_rec.id, db=db)
         print(f"activitySchemas: {activitySchemas}")    
         activities_list = ""
         for activity in activitySchemas:
@@ -471,7 +474,7 @@ def post_organizations_nearby(
                 for phone in phoneSchemas:
                     phones_list += f"{phone.phone_number}<br>"
 
-                activitySchemas = get_activities(organization_id = organization.id)
+                activitySchemas = get_activities(organization_id = organization.id, db=db)
                 print(f"activitySchemas: {activitySchemas}")    
                 activities_list = ""
                 for activity in activitySchemas:

@@ -17,7 +17,6 @@ Base = declarative_base()
 def get_db() -> Session:
     db: Session = SessionLocal()
     try:
-        #yield db
-        return db
+        return db  # Return the session directly
     finally:
         db.close()
