@@ -213,7 +213,9 @@ def get_organization(
         organization_id: int
 ) -> OrganizationSchema:
     print(f"-> get_organization: organization_id={organization_id} ...")
-    organization = db.query(Organization).filter(Organization.id == organization_id).first()
+    rec = db.query(Organization).filter(Organization.id == organization_id).first()
+    building = get_building_by_organization_id(db=db, organization_id=rec.id)   
+    organization = OrganizationSchema(id=rec.id, name=rec.name, address=building.address)
     print(f"End get_organization() -> ...")
     return organization
 
@@ -511,17 +513,71 @@ def post_organizations_nearby(
 
 
 # Возвращает организацию по ID -----------------------------------
-@router.get("/organizations/{organization_id}", response_model=OrganizationSchema)
-def get_organization_by_id(organization_id: int, api_key: str, db: Session = Depends(get_db)):
+@router.post("/organization/id", response_class=HTMLResponse)
+def post_organization_by_id(
+    organization_id: int = Form(...), 
+    api_key: str = Form(...), 
+    db: Session = Depends(get_db)
+) -> HTMLResponse:
     print(f"-> get_organization_by_id: organization_id={organization_id} ...")
     verify_api_key(api_key)
-    
-    #organization = db.query(Organization).filter(Organization.id == organization_id).first()
-    #if not organization:
-    #    raise HTTPException(status_code=404, detail="Organization not found")
-    #return organization
-    
-    return HTMLResponse(content='<div>return from get_organization_by_id</div>')
+
+    # Получение организации по ID
+    organization = get_organization(db=db, organization_id=organization_id)
+    print(f"organization: {organization}")
+
+    # Получение здания по ID организации
+    building = get_building_by_organization_id(db=db, organization_id=organization.id)
+    print(f"building: {building}")
+
+    # Получение телефонов организации
+    phones = get_phones(db, organization.id)
+    print(f"phones: {phones}")
+    phones_list = ""
+    for phone in phones:
+        phones_list += f"{phone.phone_number}<br>"
+
+    # Получение деятельностей организации
+    activities = get_activities(db=db, organization_id = organization.id)
+    print(f"activities: {activities}")
+    activities_list = ""
+    for activity in activities:
+        activities_list += f"[{activity.level}] {activity.name}<br>"
+
+    # Формирование таблицы в HTML формате
+    sTable = """
+        <table class="table">
+            <thead class="thead-light">
+                <tr>
+                    <th scope="col">ID</th>
+                    <th scope="col">Название</th>
+                    <th scope="col">Адрес</th>
+                    <th scope="col">Телефоны</th>
+                    <th scope="col">Деятельности</th>
+                </tr>
+            </thead>
+            <tbody>
+    """    
+
+    # Формирование строки таблицы
+    sRow = f"""
+        <tr>
+            <td scope="row">{organization.id}</td>
+            <td>{organization.name}</td>
+            <td>{building.address}</td>
+            <td>{phones_list}</td>
+            <td>{activities_list}</td>
+        </tr>
+    """
+
+    sTable += sRow
+    # Закрытие таблицы
+    sTable += """
+            </tbody>
+        </table>
+    """
+    # Возвращаем таблицу в HTML формате
+    return HTMLResponse(content=sTable)
 
 
 # Возвращает организации по названию деятельности -----------------------------------

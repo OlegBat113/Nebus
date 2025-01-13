@@ -36,7 +36,7 @@
                                     </div>
                                     <div class="col-md-3">
                                         <div class="m-20">
-                                            <button type="submit" class="btn btn-success btn-rounded">Success</button>
+                                            <button type="submit" class="btn btn-success btn-rounded">Запрос</button>
                                         </div>
                                     </div>
                                 </div>
@@ -62,7 +62,7 @@
                                     </div>
                                     <div class="col-md-3">
                                         <div class="m-20">
-                                            <button type="submit" class="btn btn-success btn-rounded">Success</button>
+                                            <button type="submit" class="btn btn-success btn-rounded">Запрос</button>
                                         </div>
                                     </div>
                                 </div>
@@ -90,7 +90,7 @@
                                     </div>
                                     <div class="col-md-3">
                                         <div class="m-20">
-                                            <button type="submit" class="btn btn-success btn-rounded">Success</button>
+                                            <button type="submit" class="btn btn-success btn-rounded">Запрос</button>
                                         </div>
                                     </div>
                                 </div>  <!-- row -->
@@ -102,21 +102,23 @@
                     <div class="card">
                         <div class="card-body">
                             <p class="card-text">вывод информации об организации по её идентификатору.</p>
-                            <div class="row">
-                                <div class="col-md-3">
-                                    <div class="m-20">
-                                        <div class="form-group">
-                                            <label class="control-label">Идентификатор организации.</label>
-                                            <input type="text" class="form-control form-control-sm" placeholder="id">
+                            <form id="organizationForm2" method="post" action="/organization_by_id/">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="m-20">
+                                            <div class="form-group">
+                                                <label class="control-label">Идентификатор организации.</label>
+                                                <input type="text" id="organization_id" class="form-control form-control-sm" placeholder="id">
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-9">
                                     <div class="m-20">
-                                        <button class="btn btn-success btn-rounded">Success</button>
+                                        <button class="btn btn-success btn-rounded">Запрос</button>
                                     </div>
                                 </div>
-                            </div>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>           
@@ -187,6 +189,33 @@
 
 <script>
     const apiKey = '{{ api_key }}';
+    document.getElementById('organizationForm2').addEventListener('submit', function(event) {
+        console.log('submit activityForm1 ...');
+    
+        // отмена действия по умолчанию
+        event.preventDefault();
+        console.log('organization_id', document.getElementById('organization_id').value);
+        const response = fetch('/organization/id', {
+            method: 'POST', // Или 'GET', в зависимости от вашего маршрута
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded', // Убедитесь, что заголовок правильный
+            },
+            body: new URLSearchParams({
+                'organization_id': document.getElementById('organization_id').value,
+                'api_key': apiKey
+                })
+            })
+            .then(resp => resp.text())
+            .then(data => {
+                console.log('data', typeof data);
+                console.log('data', data);
+                var target = document.getElementById('result');
+                target.innerHTML = data;
+            })
+            .catch(error => {
+                console.error('Ошибка при получении данных:', error);
+            });
+    });  
     document.getElementById('activityForm1').addEventListener('submit', function(event) {
         console.log('submit activityForm1 ...');
     
@@ -194,7 +223,7 @@
         event.preventDefault();
 
         const response = fetch('/organizations/activity', {
-            method: 'POST', // Или 'POST', в зависимости от вашего маршрута
+            method: 'POST', // Или 'GET', в зависимости от вашего маршрута
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded', // Убедитесь, что заголовок правильный
             },
@@ -213,7 +242,8 @@
             .catch(error => {
                 console.error('Ошибка при получении данных:', error);
             });
-    });    document.getElementById('buildForm1').addEventListener('submit', function(event) {
+    });    
+    document.getElementById('buildForm1').addEventListener('submit', function(event) {
         console.log('submit buildForm1 ...');
     
         // отмена действия по умолчанию

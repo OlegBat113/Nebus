@@ -17,7 +17,7 @@ Base = declarative_base()
 def get_db() -> Iterator[Session]:
     db: Session = SessionLocal()
     # type(db)=<class 'sqlalchemy.orm.session.Session'>
-    print(f"-> get_db() -> db={type(db)} ...")
+    #print(f"-> get_db() -> db={type(db)} ...")
     try:
         yield db
         #return db  # Return the session directly
