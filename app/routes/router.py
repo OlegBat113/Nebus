@@ -68,14 +68,16 @@ def get_all_buildings(db: Session) -> List[BuildingSchema]:
 
 
 # Возвращает список телефонов организации -----------------------------------
-def get_phones(organization_id: int) -> List[PhonesSchema]:
+def get_phones(
+        db: Session, 
+        organization_id: int
+) -> List[PhonesSchema]:
     print(f"-> get_phones: organization_id={organization_id} ...")
     s = f"""
         SELECT p.phone_number
         FROM phones p
         WHERE p.organization_id = {organization_id}
     """
-    db = get_db()
     query = text(s)
     print(f"query: {query}")
     result = db.execute(query)
@@ -89,12 +91,14 @@ def get_phones(organization_id: int) -> List[PhonesSchema]:
         phones.append(phone)
     print(f"phones: {phones}")
     print(f"End get_phones() -> ...")
-    db.close()
     return phones
 
 
 # Возвращает адрес по  id организации -----------------------------------
-def get_building_by_organization_id(organization_id: int) -> BuildingSchema:
+def get_building_by_organization_id(
+        db: Session, 
+        organization_id: int
+) -> BuildingSchema:
     print(f"-> get_building_by_organization_id: organization_id={organization_id} ...")
     s = f"""
         SELECT c.id, c.address, c.latitude, c.longitude
@@ -102,7 +106,6 @@ def get_building_by_organization_id(organization_id: int) -> BuildingSchema:
         LEFT JOIN buildings c ON c.id = a.building_id
         WHERE a.organization_id = {organization_id}
     """
-    db = get_db()
     query = text(s)
     print(f"query: {query}")
     result = db.execute(query)
@@ -118,12 +121,14 @@ def get_building_by_organization_id(organization_id: int) -> BuildingSchema:
     )
     print(f"BuildingSchema: {building}")
     print(f"End get_building_by_organization_id() -> ...")
-    db.close()
     return building
 
 
 # Возвращает список деятельностей организации -----------------------------------
-def get_activities(db: Session, organization_id: Optional[int] = None) -> List[ActivitySchema]:
+def get_activities(
+        db: Session, 
+        organization_id: Optional[int] = None
+) -> List[ActivitySchema]:
     print(f"-> get_activities: organization_id={organization_id} ...")
     s = f"""
         SELECT c.id, c.name, c.parent_id, c.level
@@ -149,11 +154,12 @@ def get_activities(db: Session, organization_id: Optional[int] = None) -> List[A
 
 
 # Возвращает деятельность по ID -----------------------------------
-def get_activity(activity_id: int) -> Optional[ActivitySchema]:
+def get_activity(
+        db: Session, 
+        activity_id: int
+) -> Optional[ActivitySchema]:
     """Возвращает деятельность по ID."""
-    db = get_db()
     activity = db.query(Activity).filter(Activity.id == activity_id).first()
-    db.close()
     if activity is None:
         return None
     return activity 
@@ -181,7 +187,10 @@ def distance(lat1, lon1, lat2, lon2):
 
 
 # Возвращает список организаций по ID здания -----------------------------------
-def get_organizations_by_building(building_id: int):
+def get_organizations_by_building(
+        db: Session, 
+        building_id: int
+):
     print(f"-> get_organizations_by_building: building_id={building_id} ...")
     s = f"""
         SELECT b.id, b.name, c.address
@@ -191,20 +200,21 @@ def get_organizations_by_building(building_id: int):
         WHERE a.building_id = {building_id} 
         ORDER BY b.name
     """
-    db = get_db()
     query = text(s)
     print(f"query: {query}")
     result = db.execute(query)
     recs = result.fetchall()
-    db.close()
     return recs
 
 
 # Возвращает организацию по ID -----------------------------------
-def get_organization(organization_id: int) -> OrganizationSchema:
-    db = get_db()
+def get_organization(
+        db: Session, 
+        organization_id: int
+) -> OrganizationSchema:
+    print(f"-> get_organization: organization_id={organization_id} ...")
     organization = db.query(Organization).filter(Organization.id == organization_id).first()
-    db.close()
+    print(f"End get_organization() -> ...")
     return organization
 
 
@@ -214,8 +224,8 @@ def get_organization(organization_id: int) -> OrganizationSchema:
 def read_root(request: Request, db: Session = Depends(get_db)):
     print(f"-> Главная страница: ...")
     # Список всех зданий
-    buildings = get_all_buildings(db)
-    activities = get_activities(db)
+    buildings = get_all_buildings(db=db)
+    activities = get_activities(db=db)
     buildings_list = []
     activities_list = []
     for building in buildings:
@@ -256,7 +266,7 @@ def post_organizations_by_building(
     verify_api_key(api_key)
 
     # Получение списка организаций по ID здания
-    recs = get_organizations_by_building(building_id)
+    recs = get_organizations_by_building(db=db, building_id=building_id)
 
     # Список всех организаций в здании (тип будет List[OrganizationSchema])
     organizations = []
@@ -280,7 +290,7 @@ def post_organizations_by_building(
         print(f"org_rec: {org_rec}")
 
         # Получение телефонов организации
-        phones = get_phones(org_rec.id)
+        phones = get_phones(db, org_rec.id)
         phones_list = ""
         for phone in phones:
             print(f"phone: {phone}")
@@ -288,7 +298,7 @@ def post_organizations_by_building(
         print(f"phones_list: {phones_list}")
 
         # Получение деятельностей организации
-        activities = get_activities(organization_id = org_rec.id, db=db)
+        activities = get_activities(db=db, organization_id = org_rec.id)
         print(f"ActivitiesSchema: {activities}")
         # Список всех деятельностей организации
         activities_names = ""
@@ -298,7 +308,7 @@ def post_organizations_by_building(
             activities_names += f"[{activity.level}] {activity.name}<br>"
 
         # Получение адреса организации
-        building = get_building_by_organization_id(org_rec.id)
+        building = get_building_by_organization_id(db=db, organization_id=org_rec.id)
         print(f"BuildingSchema: {building}")
 
         # Формирование строки таблицы
@@ -338,7 +348,7 @@ def add_activity(
 
     # Проверка уровня родителя деятельности
     if parent_id is not None:
-        activity = get_activity(parent_id)
+        activity = get_activity(db=db, activity_id=parent_id)
         if (activity is not None) and (activity.level >= 3):
             raise HTTPException(status_code=400, detail="ERROR: Уровень вложенности родителя деятельности не должен превышать 3!")
 
@@ -392,19 +402,19 @@ def post_organizations_by_activity(
     for org_rec in recs:
         print(f"org_rec: {org_rec}")
 
-        phoneSchemas = get_phones(org_rec.id)
+        phoneSchemas = get_phones(db, org_rec.id)
         #print(f"phoneSchemas: {phoneSchemas}")
         phones_list = ""
         for phone in phoneSchemas:
             phones_list += f"{phone.phone_number}<br>"
 
-        activitySchemas = get_activities(organization_id = org_rec.id, db=db)
+        activitySchemas = get_activities(db=db, organization_id = org_rec.id)
         print(f"activitySchemas: {activitySchemas}")    
         activities_list = ""
         for activity in activitySchemas:
             activities_list += f"[{activity.level}] {activity.name}<br>"
 
-        building = get_building_by_organization_id(org_rec.id)
+        building = get_building_by_organization_id(db=db, organization_id=org_rec.id)
         print(f"BuildingSchema: {building}")
 
         sRow = f"""
@@ -464,17 +474,17 @@ def post_organizations_nearby(
         # если расстояние меньше радиуса, то добавляем в список
         if d <= radius:
             print(f"building: {building.id}, {building.address}, {round(d, 1)} км.")
-            organizations = get_organizations_by_building(building.id)
+            organizations = get_organizations_by_building(db=db, building_id=building.id)
             print(f"all organizations in building: {organizations}")
             for organization in organizations:
                 print(f"organization: {organization}")
-                phoneSchemas = get_phones(organization.id)
+                phoneSchemas = get_phones(db, organization.id)
                 #print(f"phoneSchemas: {phoneSchemas}")
                 phones_list = ""
                 for phone in phoneSchemas:
                     phones_list += f"{phone.phone_number}<br>"
 
-                activitySchemas = get_activities(organization_id = organization.id, db=db)
+                activitySchemas = get_activities(db=db, organization_id = organization.id)
                 print(f"activitySchemas: {activitySchemas}")    
                 activities_list = ""
                 for activity in activitySchemas:
