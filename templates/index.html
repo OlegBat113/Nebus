@@ -126,27 +126,25 @@
                     <div class="card">
                         <div class="card-body">
                             <p class="card-text">искать организации по виду деятельности (все вложенные).</p>
-                            <div class="row">
-                                <div class="col-3">
-                                    <div class="m-20">
-                                        <div class="dropdown">
-                                            <button class="btn btn-default dropdown-toggle"  data-toggle="dropdown">
-                                                <span>Деятельность</span>
-                                            </button>
-                                            <div class="dropdown-menu">
-                                                <a class="dropdown-item" href="#">Action</a>
-                                                <a class="dropdown-item" href="#">Another action</a>
-                                                <a class="dropdown-item" href="#">Something else here</a>
-                                            </div>
+                            <form id="activityForm2" method="post">
+                                <div class="row">
+                                    <div class="col-3">
+                                        <div class="form-group">
+                                            <label class="control-label">Выбор деятельности</label>
+                                                <select class="form-control" id="activity_id2">
+                                                    {% for activity in activities %}
+                                                        <option value="{{ activity.id }}">[{{ activity.level }}] &nbsp; &nbsp; {{ activity.name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="m-20">
+                                            <button type="submit" class="btn btn-success btn-rounded">Запрос</button>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-9">
-                                    <div class="m-20">
-                                        <button class="btn btn-success btn-rounded">Success</button>
-                                    </div>
-                                </div>
-                            </div>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -189,6 +187,33 @@
 
 <script>
     const apiKey = '{{ api_key }}';
+    document.getElementById('activityForm2').addEventListener('submit', function(event) {
+        console.log('submit activityForm2 ...');
+    
+        // отмена действия по умолчанию
+        event.preventDefault();
+
+        const response = fetch('/activity/level', {
+            method: 'POST', // Или 'GET', в зависимости от вашего маршрута
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded', // Убедитесь, что заголовок правильный
+            },
+            body: new URLSearchParams({
+                'activity_id': document.getElementById('activity_id2').value,
+                'api_key': apiKey
+                })
+            })
+            .then(resp => resp.text())
+            .then(data => {
+                console.log('data', typeof data);
+                console.log('data', data);
+                var target = document.getElementById('result');
+                target.innerHTML = data;
+            })
+            .catch(error => {
+                console.error('Ошибка при получении данных:', error);
+            });
+    });   
     document.getElementById('organizationForm2').addEventListener('submit', function(event) {
         console.log('submit activityForm1 ...');
     
