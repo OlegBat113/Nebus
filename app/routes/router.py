@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, HTTPException, Depends, Request, Form
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -16,6 +17,12 @@ from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 import math
 import pandas as pd
+
+# Настройка логирования
+#logging.basicConfig(level=logging.INFO)  # Установите уровень логирования
+logging.basicConfig(level=logging.DEBUG)  # Установите уровень логирования
+# Создание логгера
+logger = logging.getLogger(__name__) 
 
 # Создание роутера
 router = APIRouter()
@@ -49,14 +56,14 @@ templates = Jinja2Templates(directory="templates")
 
 # Возвращает список всех зданий из БД -----------------------------------------------------------------------------------------------------------------------
 def get_all_buildings(db: Session) -> List[BuildingSchema]:
-    print(f"-> get_all_buildings(): ...")
+    logger.info("Запрос на получение всех зданий.")
     s = f"""
         SELECT id, address, latitude, longitude
         FROM buildings
         order by address
     """
     query = text(s)
-    print(f"query: {query}")
+    logger.debug(f"query: {query}")
     result = db.execute(query)
     recs = result.fetchall()
     # Список всех зданий
@@ -66,6 +73,7 @@ def get_all_buildings(db: Session) -> List[BuildingSchema]:
         # Создание объекта BuildingSchema
         building = BuildingSchema(id=rec.id, address=rec.address, latitude=rec.latitude, longitude=rec.longitude)
         buildings.append(building)
+    logger.info(f"Всего зданий: {len(buildings)}")
     return buildings
 
 
@@ -74,14 +82,14 @@ def get_phones(
         db: Session, 
         organization_id: int
 ) -> List[PhonesSchema]:
-    print(f"-> get_phones: organization_id={organization_id} ...")
+    logger.info(f"Запрос на получение телефонов организации: organization_id={organization_id} ...")
     s = f"""
         SELECT p.phone_number
         FROM phones p
         WHERE p.organization_id = {organization_id}
     """
     query = text(s)
-    print(f"query: {query}")
+    logger.debug(f"query: {query}")
     result = db.execute(query)
     recs = result.fetchall()
     phones = []
@@ -91,8 +99,8 @@ def get_phones(
             phone_number=rec.phone_number
         )
         phones.append(phone)
-    print(f"phones: {phones}")
-    print(f"End get_phones() -> ...")
+    logger.info(f"Телефонов организации: {len(phones)}")
+    logger.info(f"End get_phones() -> ...")
     return phones
 
 
@@ -101,7 +109,7 @@ def get_building_by_organization_id(
         db: Session, 
         organization_id: int
 ) -> BuildingSchema:
-    print(f"-> get_building_by_organization_id(): organization_id={organization_id} ...")
+    logger.info(f"Запрос на получение адреса организации: organization_id={organization_id} ...")
     s = f"""
         SELECT c.id, c.address, c.latitude, c.longitude
         FROM building_organization a
@@ -109,7 +117,7 @@ def get_building_by_organization_id(
         WHERE a.organization_id = {organization_id}
     """
     query = text(s)
-    print(f"query: {query}")
+    logger.debug(f"query: {query}")
     result = db.execute(query)
     recs = result.fetchall()
     if len(recs) == 0:
@@ -121,8 +129,8 @@ def get_building_by_organization_id(
         latitude=rec[2], 
         longitude=rec[3]
     )
-    print(f"BuildingSchema: {building}")
-    print(f"End get_building_by_organization_id() -> ...")
+    logger.info(f"BuildingSchema: {building}")
+    logger.info(f"End get_building_by_organization_id() -> ...")
     return building
 
 
@@ -131,9 +139,9 @@ def get_activities(
         db: Session, 
         organization_id: Optional[int] = None
 ) -> List[ActivitySchema]:
-    print(f"-> get_activities(): organization_id={organization_id} ...")
+    logger.info(f"Запрос на получение деятельностей организации: organization_id={organization_id} ...")
     if organization_id is not None:
-        print(f"organization_id: {organization_id}")
+        logger.info(f"organization_id: {organization_id}")
         s = f"""
             SELECT c.id, c.name, c.parent_id, c.level
             FROM organization_activity a 
@@ -148,7 +156,7 @@ def get_activities(
             ORDER BY c.level, c.parent_id
         """
     query = text(s)
-    print(f"query: {query}")
+    logger.debug(f"query: {query}")
     result = db.execute(query)
     recs = result.fetchall()
     #print(f"activities recs: {recs}")
@@ -156,9 +164,9 @@ def get_activities(
     for rec in recs:
         #print(f"rec: {rec}")
         activity = ActivitySchema(id=rec.id, name=rec.name, parent_id=rec.parent_id, level=rec.level)
-        print(f"activity: {activity}")
+        logger.info(f"activity: {activity}")
         activities.append(activity)
-    print(f"End get_activities() -> ...")
+    logger.info(f"End get_activities() -> ...")
     return activities
 
 
@@ -167,7 +175,7 @@ def get_activity_by_id(
         db: Session, 
         activity_id: int
 ) -> Optional[ActivitySchema]:
-    print(f"-> get_activity_by_id(): activity_id={activity_id} ...")
+    logger.info(f"Запрос на получение деятельности по ID: activity_id={activity_id} ...")
     """Возвращает деятельность по ID."""
     activity = db.query(Activity).filter(Activity.id == activity_id).first()
     if activity is None:
@@ -201,7 +209,7 @@ def get_organizations_by_building(
         db: Session, 
         building_id: int
 ):
-    print(f"-> get_organizations_by_building(): building_id={building_id} ...")
+    logger.info(f"Запрос на получение организаций по ID здания: building_id={building_id} ...")
     s = f"""
         SELECT b.id, b.name, c.address
         FROM building_organization a 
@@ -211,7 +219,7 @@ def get_organizations_by_building(
         ORDER BY b.name
     """
     query = text(s)
-    print(f"query: {query}")
+    logger.debug(f"query: {query}")
     result = db.execute(query)
     recs = result.fetchall()
     return recs
@@ -222,11 +230,11 @@ def get_organization(
         db: Session, 
         organization_id: int
 ) -> OrganizationSchema:
-    print(f"-> get_organization: organization_id={organization_id} ...")
+    logger.info(f"Запрос на получение организации: organization_id={organization_id} ...")
     rec = db.query(Organization).filter(Organization.id == organization_id).first()
     building = get_building_by_organization_id(db=db, organization_id=rec.id)   
     organization = OrganizationSchema(id=rec.id, name=rec.name, address=building.address)
-    print(f"End get_organization() -> ...")
+    logger.info(f"End get_organization() -> ...")
     return organization
 
 
@@ -255,7 +263,7 @@ class TreeNode:
             child_node.level = self.level + 1
             self.childrens.append(child_node)
         else:
-            print("Уровень больше 3 - не добавляем")
+            logger.warning("Уровень больше 3 - не добавляем")
             return
 
     # функция вывода узла
@@ -289,7 +297,7 @@ def get_organizations_by_activity(
         db: Session, 
         activity_id: int
 ) -> List[OrganizationSchema]:
-    print(f"-> get_organizations_by_activity(): activity_id={activity_id} ...")
+    logger.info(f"Запрос на получение организаций по ID деятельности: activity_id={activity_id} ...")
 
     s = f"""
         SELECT b.id, b.name
@@ -299,15 +307,15 @@ def get_organizations_by_activity(
         ORDER BY b.name
     """
     query = text(s)
-    print(f"query: {query}")
+    logger.debug(f"query: {query}")
     result = db.execute(query)
     recs = result.fetchall()
-    print(f"recs: {recs}")
+    logger.info(f"recs: {recs}")
     organizations = []
     for rec in recs:
-        print(f"rec: {rec}")
+        logger.info(f"rec: {rec}")
         organization = OrganizationSchema(id=rec.id, name=rec.name)
-        print(f"organization: {organization}")
+        logger.info(f"organization: {organization}")
         # проверка на дублирование
         bSame = False
         for org in organizations:
@@ -316,8 +324,8 @@ def get_organizations_by_activity(
                 break
         if not bSame:
             organizations.append(organization)
-    print(f"organizations: {organizations}")
-    print(f"End get_organizations_by_activity() -> ...")
+    logger.info(f"organizations: {organizations}")
+    logger.info(f"End get_organizations_by_activity() -> ...")
     return organizations
 
 
@@ -326,7 +334,7 @@ def get_organizations_by_name(
         db: Session, 
         name: str
 ) -> List[OrganizationSchema]:
-    print(f"-> get_organizations_by_name(): name={name} ...")
+    logger.info(f"get_organizations_by_name() -> ...")
     s = f"""
         SELECT b.id, b.name
         FROM organizations b
@@ -334,7 +342,7 @@ def get_organizations_by_name(
         ORDER BY b.name
     """
     query = text(s)
-    print(f"query: {query}")
+    logger.debug(f"query: {query}")
     result = db.execute(query)
     recs = result.fetchall()
     organizations = []
@@ -347,7 +355,7 @@ def get_organizations_by_name(
 # Главная страница ------------------------------------------------------------------------------------------------------------
 @router.get("/", response_class=HTMLResponse)
 def read_root(request: Request, db: Session = Depends(get_db)):
-    print(f"-> Главная страница: ...")
+    logger.info("Запрос на получение главной страницы.")
     # Список всех зданий
     buildings = get_all_buildings(db=db)
     activities = get_activities(db=db)
@@ -385,7 +393,7 @@ def post_organizations_by_building(
     api_key: str = Form(...),  # API ключ
     db: Session = Depends(get_db)
 ) -> HTMLResponse:
-    print(f"-> (POST) post_organizations_by_building(): building_id={building_id} ...")
+    logger.info(f"Запрос на получение организаций по ID здания: building_id={building_id} ...")
 
     # Проверка API ключа
     verify_api_key(api_key)
@@ -412,29 +420,29 @@ def post_organizations_by_building(
     """
     # Цикл по всей выборке
     for org_rec in recs:
-        print(f"org_rec: {org_rec}")
+        logger.info(f"org_rec: {org_rec}")
 
         # Получение телефонов организации
         phones = get_phones(db, org_rec.id)
         phones_list = ""
         for phone in phones:
-            print(f"phone: {phone}")
+            logger.info(f"phone: {phone}")
             phones_list += f"{phone.phone_number}<br>"
-        print(f"phones_list: {phones_list}")
+        logger.info(f"phones_list: {phones_list}")
 
         # Получение деятельностей организации
         activities = get_activities(db=db, organization_id = org_rec.id)
-        print(f"ActivitiesSchema: {activities}")
+        logger.info(f"ActivitiesSchema: {activities}")
         # Список всех деятельностей организации
         activities_names = ""
         # Цикл по всем деятельностям
         for activity in activities:
-            print(f"activity: {activity}")
+            logger.info(f"activity: {activity}")
             activities_names += f"[{activity.level}] {activity.name}<br>"
 
         # Получение адреса организации
         building = get_building_by_organization_id(db=db, organization_id=org_rec.id)
-        print(f"BuildingSchema: {building}")
+        logger.info(f"BuildingSchema: {building}")
 
         # Формирование строки таблицы
         sRow = f"""
@@ -466,7 +474,7 @@ def add_activity(
     db: Session = Depends(get_db)
 ) -> ActivitySchema:
     """Добавление новой деятельности с проверкой уровня вложенности."""
-    print(f"-> (POST) add_activity(): parent_id={parent_id}, name={name} ...")
+    logger.info(f"Запрос на добавление новой деятельности: parent_id={parent_id}, name={name} ...")
 
     # Проверка API ключа
     verify_api_key(api_key)
@@ -492,7 +500,7 @@ def post_organizations_by_activity(
     api_key: str = Form(...), 
     db: Session = Depends(get_db)
 ) -> HTMLResponse:
-    print(f"-> (POST) post_organizations_by_activity(): activity_id={activity_id} ...")
+    logger.info(f"Запрос на получение организаций по ID деятельности: activity_id={activity_id} ...")
     # Проверка API ключа
     verify_api_key(api_key)
 
@@ -515,7 +523,7 @@ def post_organizations_by_activity(
     """    
     # Цикл по всей выборке
     for organization in organizations:
-        print(f"organization: {organization}")
+        logger.info(f"organization: {organization}")
         # Получение телефонов организации
         phoneSchemas = get_phones(db, organization.id)
         #print(f"phoneSchemas: {phoneSchemas}")
@@ -525,14 +533,14 @@ def post_organizations_by_activity(
 
         # Получение деятельностей организации
         activitySchemas = get_activities(db=db, organization_id = organization.id)
-        print(f"activitySchemas: {activitySchemas}")    
+        logger.info(f"activitySchemas: {activitySchemas}")    
         activities_list = ""
         for activity in activitySchemas:
             activities_list += f"[{activity.level}] {activity.name}<br>"
 
         # Получение здания организации
         building = get_building_by_organization_id(db=db, organization_id=organization.id)
-        print(f"BuildingSchema: {building}")
+        logger.info(f"BuildingSchema: {building}")
 
         sRow = f"""
             <tr>
@@ -563,11 +571,11 @@ def post_organizations_nearby(
     api_key: str = Form(...), 
     db: Session = Depends(get_db)
 ) -> HTMLResponse:
-    print(f"-> (POST) post_organizations_nearby(): latitude={latitude}, longitude={longitude}, radius={radius}, api_key={api_key} ...")
+    logger.info(f"Запрос на получение организаций по координатам и радиусу: latitude={latitude}, longitude={longitude}, radius={radius}, api_key={api_key} ...")
     verify_api_key(api_key)
 
     buildings = db.query(Building).all()
-    print(f"all buildings: {buildings}")
+    logger.info(f"all buildings: {buildings}")
 
     # Формирование таблицы в HTML формате
     sTable = """
@@ -584,17 +592,17 @@ def post_organizations_nearby(
             <tbody>
     """    
     for building in buildings:
-        print(f"building: {building}")
+        logger.info(f"building: {building}")
         # расстояние в километрах
         d = distance(latitude, longitude, building.latitude, building.longitude)/1000
-        print(f"distance: {d}")
+        logger.info(f"distance: {d}")
         # если расстояние меньше радиуса, то добавляем в список
         if d <= radius:
-            print(f"building: {building.id}, {building.address}, {round(d, 1)} км.")
+            logger.info(f"building: {building.id}, {building.address}, {round(d, 1)} км.")
             organizations = get_organizations_by_building(db=db, building_id=building.id)
-            print(f"all organizations in building: {organizations}")
+            logger.info(f"all organizations in building: {organizations}")
             for organization in organizations:
-                print(f"organization: {organization}")
+                logger.info(f"organization: {organization}")
                 phoneSchemas = get_phones(db, organization.id)
                 #print(f"phoneSchemas: {phoneSchemas}")
                 phones_list = ""
@@ -602,7 +610,7 @@ def post_organizations_nearby(
                     phones_list += f"{phone.phone_number}<br>"
 
                 activitySchemas = get_activities(db=db, organization_id = organization.id)
-                print(f"activitySchemas: {activitySchemas}")    
+                logger.info(f"activitySchemas: {activitySchemas}")    
                 activities_list = ""
                 for activity in activitySchemas:
                     activities_list += f"[{activity.level}] {activity.name}<br>"
@@ -634,27 +642,27 @@ def post_organization_by_id(
     api_key: str = Form(...), 
     db: Session = Depends(get_db)
 ) -> HTMLResponse:
-    print(f"-> (POST) post_organization_by_id(): organization_id={organization_id} ...")
+    logger.info(f"Запрос на получение организации по ID: organization_id={organization_id} ...")
     verify_api_key(api_key)
 
     # Получение организации по ID
     organization = get_organization(db=db, organization_id=organization_id)
-    print(f"organization: {organization}")
+    logger.info(f"organization: {organization}")
 
     # Получение здания по ID организации
     building = get_building_by_organization_id(db=db, organization_id=organization.id)
-    print(f"building: {building}")
+    logger.info(f"building: {building}")
 
     # Получение телефонов организации
     phones = get_phones(db, organization.id)
-    print(f"phones: {phones}")
+    logger.info(f"phones: {phones}")
     phones_list = ""
     for phone in phones:
         phones_list += f"{phone.phone_number}<br>"
 
     # Получение деятельностей организации
     activities = get_activities(db=db, organization_id = organization.id)
-    print(f"activities: {activities}")
+    logger.info(f"activities: {activities}")
     activities_list = ""
     for activity in activities:
         activities_list += f"[{activity.level}] {activity.name}<br>"
@@ -702,7 +710,7 @@ def activity_level(
     api_key: str = Form(...), 
     db: Session = Depends(get_db)
 ) -> HTMLResponse:
-    print(f"-> (POST) post_activity_level(): activity_id={activity_id} ...")
+    logger.info(f"Запрос на получение организаций по названию деятельности: activity_id={activity_id} ...")
     verify_api_key(api_key)
 
     # Получение всех деятельностей
@@ -712,10 +720,10 @@ def activity_level(
     # создаем словарь узлов
     tree_nodes = {}
     for item in all_activitys:
-        print(f"item: {item}")
+        logger.info(f"item: {item}")
         # создаем узел
         node = TreeNode(name=item.name, level=item.level, id=item.id, parent_id=item.parent_id)
-        print(f"node: {node}")
+        logger.info(f"node: {node}")
         if node.level > 1:
             #print("ищем родителя ...")
             for key in tree_nodes:
@@ -728,12 +736,12 @@ def activity_level(
         # добавляем в словарь узлов
         tree_nodes[node.id] = node
 
-    print(f"Вывод словаря tree_nodes:")
-    print(f"{tree_nodes}")
+    logger.info(f"Вывод словаря tree_nodes:")
+    logger.info(f"{tree_nodes}")
 
-    print(f"Получить всех потомков узла [{tree_nodes[activity_id].name}]:")
+    logger.info(f"Получить всех потомков узла [{tree_nodes[activity_id].name}]:")
     aActivity_List = get_childrens(tree_nodes[activity_id])
-    print(aActivity_List)
+    logger.info(aActivity_List)
 
     # Формирование таблицы в HTML формате
     sTable = """
@@ -751,37 +759,37 @@ def activity_level(
     """    
     organizations = []
     for items in aActivity_List:
-        print(f"items: {items}")
+        logger.info(f"items: {items}")
         orgs = get_organizations_by_activity(db=db, activity_id=items.id)
         organizations += orgs
-    print(f"-1- organizations: {organizations}")
+    logger.info(f"-1- organizations: {organizations}")
 
 
     seen = set()
     unique_organizations = []
     for org in organizations:
-        print(f"org: {org}")
+        logger.info(f"org: {org}")
         if org.id not in seen:
             seen.add(org.id)
             unique_organizations.append(org)
 
-    print(f"-2- unique_organizations: {unique_organizations}")
+    logger.info(f"-2- unique_organizations: {unique_organizations}")
 
 
 
     for org in unique_organizations:
-        print(f"org: {org}")
+        logger.info(f"org: {org}")
         building = get_building_by_organization_id(db=db, organization_id=org.id)
-        print(f"BuildingSchema: {building}")
+        logger.info(f"BuildingSchema: {building}")
 
         phones = get_phones(db, org.id)
-        print(f"phones: {phones}")
+        logger.info(f"phones: {phones}")
         phones_list = ""
         for phone in phones:
             phones_list += f"{phone.phone_number}<br>"
 
         activities = get_activities(db=db, organization_id = org.id)
-        print(f"activitySchemas: {activities}")    
+        logger.info(f"activitySchemas: {activities}")    
         activities_list = ""
         for activity in activities:
             activities_list += f"[{activity.level}] {activity.name}<br>"
@@ -815,11 +823,11 @@ def search_organizations_by_name(
     api_key: str = Form(...), 
     db: Session = Depends(get_db)
 ) -> HTMLResponse:
-    print(f"-> (POST) search_organizations_by_name(): name={name} ...")
+    logger.info(f"Запрос на получение организаций по названию: name={name} ...")
     verify_api_key(api_key)
 
     organizations = get_organizations_by_name(db=db, name=name)
-    print(f"organizations: {organizations}")
+    logger.info(f"organizations: {organizations}")
 
     # Формирование таблицы в HTML формате
     sTable = """
@@ -837,16 +845,16 @@ def search_organizations_by_name(
     """    
     for organization in organizations:
         building = get_building_by_organization_id(db=db, organization_id=organization.id)
-        print(f"BuildingSchema: {building}")
+        logger.info(f"BuildingSchema: {building}")
 
         activities = get_activities(db=db, organization_id = organization.id)
-        print(f"activitySchemas: {activities}")    
+        logger.info(f"activitySchemas: {activities}")    
         activities_list = ""
         for activity in activities:
             activities_list += f"[{activity.level}] {activity.name}<br>"
 
         phones = get_phones(db, organization.id)
-        print(f"phones: {phones}")
+        logger.info(f"phones: {phones}")
         phones_list = ""
         for phone in phones:
             phones_list += f"{phone.phone_number}<br>"
