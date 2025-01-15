@@ -21,6 +21,7 @@ import pandas as pd
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)  # Установите уровень логирования
 #logging.basicConfig(level=logging.DEBUG)  # Установите уровень логирования
+
 # Создание логгера
 logger = logging.getLogger(__name__) 
 
@@ -370,6 +371,10 @@ def get_organizations_by_name(
 # Главная страница ------------------------------------------------------------------------------------------------------------
 @router.get("/", response_class=HTMLResponse)
 def read_root(request: Request, db: Session = Depends(get_db)):
+    """
+        Главная страница проекта Nebus. <br>
+        запуск в браузере: http://localhost:8000/
+    """
     logger.info("Главная страница.")
     # Список всех зданий
     buildings = get_all_buildings(db=db)
@@ -400,6 +405,10 @@ def read_root(request: Request, db: Session = Depends(get_db)):
 # Информация -------------------------------------------------------------------------------------------------------------
 @router.get("/info", response_class=HTMLResponse)
 def read_info(request: Request):
+    """
+        Информация о проекте Nebus.<br>
+        запуск в браузере: http://localhost:8000/info
+    """
     return templates.TemplateResponse("info.html", {"request": request})
 
 
@@ -410,6 +419,12 @@ def post_organizations_by_building(
     api_key: str = Form(...),  # API ключ
     db: Session = Depends(get_db)
 ) -> HTMLResponse:
+    """
+        Возвращает список организаций по ID здания.<br>
+        building_id - ID здания<br>
+        api_key - API ключ<br>
+        db - сессия базы данных<br>
+    """
     logger.info(f"post_organizations_by_building() -> ...")
     logger.debug(f"Запрос на получение организаций по ID здания: building_id={building_id} ...")
 
@@ -489,6 +504,13 @@ def add_activity(
     api_key: str = Form(...),
     db: Session = Depends(get_db)
 ) -> ActivitySchema:
+    """
+        Добавление новой деятельности с проверкой уровня вложенности.<br>
+        parent_id - ID родителя деятельности<br>
+        name - название деятельности<br>
+        api_key - API ключ<br>
+        db - сессия базы данных<br>
+    """
     logger.info(f"add_activity() -> ...")
     logger.debug(f"Запрос на добавление новой деятельности: parent_id={parent_id}, name={name} ...")
     """Добавление новой деятельности с проверкой уровня вложенности."""
@@ -517,6 +539,12 @@ def post_organizations_by_activity(
     api_key: str = Form(...), 
     db: Session = Depends(get_db)
 ) -> HTMLResponse:
+    """
+        Возвращает список организаций по ID деятельности.<br>
+        activity_id - ID деятельности<br>
+        api_key - API ключ<br>
+        db - сессия базы данных<br>
+    """
     logger.info(f"post_organizations_by_activity() -> ...")
     logger.debug(f"Запрос на получение организаций по ID деятельности: activity_id={activity_id} ...")
     # Проверка API ключа
@@ -589,6 +617,14 @@ def post_organizations_nearby(
     api_key: str = Form(...), 
     db: Session = Depends(get_db)
 ) -> HTMLResponse:
+    """
+        Возвращает список организаций по координатам (latitude, longitude) и радиусу (radius) в км.<br>
+        latitude - широта<br>
+        longitude - долгота<br>
+        radius - радиус в км.<br>
+        api_key - API ключ<br>
+        db - сессия базы данных<br>
+    """
     logger.info(f"post_organizations_nearby() -> ...")
     logger.debug(f"Запрос на получение организаций по координатам и радиусу: latitude={latitude}, longitude={longitude}, radius={radius}, api_key={api_key} ...")
 
@@ -664,6 +700,12 @@ def post_organization_by_id(
     api_key: str = Form(...), 
     db: Session = Depends(get_db)
 ) -> HTMLResponse:
+    """
+        Возвращает организацию по ID.<br>
+        organization_id - ID организации<br>
+        api_key - API ключ<br>
+        db - сессия базы данных<br>
+    """
     logger.info(f"post_organization_by_id() -> ...")
     logger.debug(f"Запрос на получение организации по ID: organization_id={organization_id} ...")
     verify_api_key(api_key)
@@ -733,6 +775,12 @@ def activity_level(
     api_key: str = Form(...), 
     db: Session = Depends(get_db)
 ) -> HTMLResponse:
+    """
+        Возвращает организацию по названию деятельности.<br>
+        activity_id - ID деятельности<br>
+        api_key - API ключ<br>
+        db - сессия базы данных<br>
+    """
     logger.info(f"activity_level() -> ...")
     logger.debug(f"Запрос на получение организаций по названию деятельности: activity_id={activity_id} ...")
     verify_api_key(api_key)
@@ -815,8 +863,6 @@ def activity_level(
         for activity in activities:
             activities_list += f"[{activity.level}] {activity.name}<br>"
 
-
-
         sRow = f"""
             <tr>
                 <td scope="row">{org.id}</td>
@@ -844,6 +890,12 @@ def search_organizations_by_name(
     api_key: str = Form(...), 
     db: Session = Depends(get_db)
 ) -> HTMLResponse:
+    """
+        Возвращает организации по названию (можно кратко).<br>
+        name - название организации<br>
+        api_key - API ключ<br>
+        db - сессия базы данных<br>
+    """
     logger.info(f"search_organizations_by_name() -> ...")
     logger.debug(f"Запрос на получение организаций по названию: name={name} ...")
     verify_api_key(api_key)

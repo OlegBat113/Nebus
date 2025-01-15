@@ -1,0 +1,11 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.py
+*.pyw
+*.pyz
+*.py
+SQL/
+Tests/
+.git/
