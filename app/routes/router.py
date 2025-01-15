@@ -302,12 +302,46 @@ def get_organizations_by_activity(
     print(f"query: {query}")
     result = db.execute(query)
     recs = result.fetchall()
+    print(f"recs: {recs}")
+    organizations = []
+    for rec in recs:
+        print(f"rec: {rec}")
+        organization = OrganizationSchema(id=rec.id, name=rec.name)
+        print(f"organization: {organization}")
+        # проверка на дублирование
+        bSame = False
+        for org in organizations:
+            if org.id == organization.id:
+                bSame = True
+                break
+        if not bSame:
+            organizations.append(organization)
+    print(f"organizations: {organizations}")
+    print(f"End get_organizations_by_activity() -> ...")
+    return organizations
+
+
+# Возвращает список организаций по названию -----------------------------------------------------------------------------------------------------------------------
+def get_organizations_by_name(
+        db: Session, 
+        name: str
+) -> List[OrganizationSchema]:
+    print(f"-> get_organizations_by_name(): name={name} ...")
+    s = f"""
+        SELECT b.id, b.name
+        FROM organizations b
+        WHERE UPPER(b.name) LIKE UPPER('%{name}%')
+        ORDER BY b.name
+    """
+    query = text(s)
+    print(f"query: {query}")
+    result = db.execute(query)
+    recs = result.fetchall()
     organizations = []
     for rec in recs:
         organization = OrganizationSchema(id=rec.id, name=rec.name)
         organizations.append(organization)
     return organizations
-
 
 # ==============================================================================================================================
 # Главная страница ------------------------------------------------------------------------------------------------------------
@@ -715,41 +749,55 @@ def activity_level(
             </thead>
             <tbody>
     """    
-
+    organizations = []
     for items in aActivity_List:
         print(f"items: {items}")
+        orgs = get_organizations_by_activity(db=db, activity_id=items.id)
+        organizations += orgs
+    print(f"-1- organizations: {organizations}")
 
-        organizations = get_organizations_by_activity(db=db, activity_id=items.id)
-        print(f"organizations: {organizations}")
-        for organization in organizations:
-            print(f"organization: {organization}")
-            building = get_building_by_organization_id(db=db, organization_id=organization.id)
-            print(f"BuildingSchema: {building}")
 
-            phones = get_phones(db, organization.id)
-            print(f"phones: {phones}")
-            phones_list = ""
-            for phone in phones:
-                phones_list += f"{phone.phone_number}<br>"
+    seen = set()
+    unique_organizations = []
+    for org in organizations:
+        print(f"org: {org}")
+        if org.id not in seen:
+            seen.add(org.id)
+            unique_organizations.append(org)
 
-            activities = get_activities(db=db, organization_id = organization.id)
-            print(f"activitySchemas: {activities}")    
-            activities_list = ""
-            for activity in activities:
-                activities_list += f"[{activity.level}] {activity.name}<br>"
+    print(f"-2- unique_organizations: {unique_organizations}")
 
 
 
-            sRow = f"""
-                    <tr>
-                        <td scope="row">{organization.id}</td>
-                        <td>{organization.name}</td>
-                        <td>{building.address}</td>
-                        <td>{phones_list}</td>
-                        <td>{activities_list}</td>
-                    </tr>
-            """
-            sTable += sRow
+    for org in unique_organizations:
+        print(f"org: {org}")
+        building = get_building_by_organization_id(db=db, organization_id=org.id)
+        print(f"BuildingSchema: {building}")
+
+        phones = get_phones(db, org.id)
+        print(f"phones: {phones}")
+        phones_list = ""
+        for phone in phones:
+            phones_list += f"{phone.phone_number}<br>"
+
+        activities = get_activities(db=db, organization_id = org.id)
+        print(f"activitySchemas: {activities}")    
+        activities_list = ""
+        for activity in activities:
+            activities_list += f"[{activity.level}] {activity.name}<br>"
+
+
+
+        sRow = f"""
+            <tr>
+                <td scope="row">{org.id}</td>
+                <td>{org.name}</td>
+                <td>{building.address}</td>
+                <td>{phones_list}</td>
+                <td>{activities_list}</td>
+            </tr>
+        """
+        sTable += sRow
 
     # Закрытие таблицы
     sTable += """
@@ -759,11 +807,65 @@ def activity_level(
     # Возвращаем таблицу в HTML формате
     return HTMLResponse(content=sTable)
 
+
 # Возвращает организации по названию -----------------------------------------------------------------------------------------------------------------------
-@router.post("/organizations/search_by_name", response_model=List[OrganizationSchema])
-def search_organizations_by_name(name: str, api_key: str, db: Session = Depends(get_db)):
+@router.post("/organizations/search_by_name", response_class=HTMLResponse)
+def search_organizations_by_name(
+    name: str = Form(...), 
+    api_key: str = Form(...), 
+    db: Session = Depends(get_db)
+) -> HTMLResponse:
     print(f"-> (POST) search_organizations_by_name(): name={name} ...")
     verify_api_key(api_key)
-    organizations = db.query(Organization).filter(Organization.name.ilike(f"%{name}%")).all()
-    return organizations
+
+    organizations = get_organizations_by_name(db=db, name=name)
+    print(f"organizations: {organizations}")
+
+    # Формирование таблицы в HTML формате
+    sTable = """
+        <table class="table">
+            <thead class="thead-light">
+                <tr>
+                    <th scope="col">ID</th>
+                    <th scope="col">Название</th>
+                    <th scope="col">Адрес</th>
+                    <th scope="col">Телефоны</th>
+                    <th scope="col">Деятельности</th>
+                </tr>
+            </thead>
+            <tbody>
+    """    
+    for organization in organizations:
+        building = get_building_by_organization_id(db=db, organization_id=organization.id)
+        print(f"BuildingSchema: {building}")
+
+        activities = get_activities(db=db, organization_id = organization.id)
+        print(f"activitySchemas: {activities}")    
+        activities_list = ""
+        for activity in activities:
+            activities_list += f"[{activity.level}] {activity.name}<br>"
+
+        phones = get_phones(db, organization.id)
+        print(f"phones: {phones}")
+        phones_list = ""
+        for phone in phones:
+            phones_list += f"{phone.phone_number}<br>"
+
+        sRow = f"""
+            <tr>
+                <td scope="row">{organization.id}</td>
+                <td>{organization.name}</td>
+                <td>{building.address}</td>
+                <td>{phones_list}</td>
+                <td>{activities_list}</td>
+            </tr>
+        """
+        sTable += sRow
+
+    # Закрытие таблицы
+    sTable += """
+            </tbody>
+        </table>
+    """
+    return HTMLResponse(content=sTable)
 
